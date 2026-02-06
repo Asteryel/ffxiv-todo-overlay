@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>FF14 Smart Todo v1.6</title>
+    <style>
+        /* ================= [스타일 정의] ================= */
+        html, body {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            overflow: hidden;
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: transparent;
+            color: #eee;
+            padding: 0;
+            box-sizing: border-box;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        body.transparent-mode { text-shadow: none !important; }
+
+        input, .input-text, .input-date-text, .input-tiny, textarea {
+            caret-color: #ffffff !important; color: #ffffff !important;
+        }
+        input:focus, textarea:focus {
+            border-color: #8cf !important; outline: none; background-color: #444 !important;
+        }
+
+        /* 스크롤바 */
+        ::-webkit-scrollbar { width: 8px; background: transparent; }
+        ::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+        #listArea:hover::-webkit-scrollbar-thumb,
+        #editScrollArea:hover::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); }
+        ::-webkit-scrollbar-track { background: transparent; }
+
+        /* ----------- [1. 메인 뷰] ----------- */
+        #viewMode { 
+            height: 100%; 
+            display: flex; flex-direction: column; 
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 8px;
+            box-sizing: border-box;
+            border-radius: 8px;
+            
+            /* 투명도: 0.075초, 크기: 0.1초 */
+            transition: opacity 0.075s ease, transform 0.1s ease;
+            transform-origin: top left;
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        /* 20% 크기(0.2)까지만 줄어들며 사라짐 */
+        #viewMode.fading-out { opacity: 0; transform: scale(0.2); pointer-events: none; }
+        .hidden { display: none !important; }
+
+        /* 상단 헤더 */
+        .header-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 4px; flex-shrink: 0; 
+        }
+        
+        .btn-fold {
+            width: 28px; height: 20px;
+            background: #444; border: 1px solid #555;
+            border-radius: 3px; color: #eee;
+            font-size: 16px; font-weight: bold;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 5px; line-height: 1;
+        }
+        .btn-fold:hover { background: #555; color: white; }
+        .btn-fold::after { content: "－"; } 
+
+        /* 슬라이더 */
+        .slider-container {
+            width: 80px; height: 20px;
+            display: flex; align-items: center;
+            cursor: pointer; padding: 0 5px; opacity: 0.3; transition: opacity 0.2s;
+        }
+        .slider-container:hover { opacity: 1.0; }
+        .slider-track {
+            width: 100%; height: 4px; background: #555; border-radius: 2px; position: relative;
+        }
+        .slider-thumb {
+            width: 12px; height: 12px; background: #ffd700; border-radius: 50%;
+            position: absolute; top: 50%; left: 100%; transform: translate(-50%, -50%);
+            box-shadow: 0 0 2px black; pointer-events: none;
+        }
+
+        /* 아이콘 */
+        #foldedIcon {
+            display: none;
+            width: 40px; height: 40px; border-radius: 50%;
+            background-color: rgba(0,0,0,0.7); border: none; color: #ffd700; font-size: 20px; 
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            cursor: pointer; align-items: center; justify-content: center;
+            
+            transition: opacity 0.075s ease, transform 0.1s ease;
+            transform-origin: center center;
+            opacity: 0;
+            transform: scale(0.8);
+        }
+        #foldedIcon.visible { opacity: 1; transform: scale(1); }
+        #foldedIcon:hover { color: white; } 
+
+        /* 리스트 영역 */
+        #listArea { 
+            flex: 1; overflow-y: overlay; 
+            padding-right: 5px; padding-bottom: 5px; min-height: 0; 
+        }
+
+        /* 섹션 스타일 */
+        .section-container {
+            margin-bottom: 16px;
+            background-color: rgba(30, 30, 30, 0.6);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.15);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            transition: opacity 0.2s, filter 0.2s;
+        }
+        .section-container:last-child { margin-bottom: 0; }
+
+        .section-container.expired {
+            opacity: 0.5; filter: grayscale(0.5);
+            border: 1px solid #444; background-color: rgba(0, 0, 0, 0.3);
+            box-shadow: none;
+        }
+        .section-container.expired:hover { opacity: 1.0; filter: grayscale(0); }
+
+        h4 {
+            margin: 0 0 8px 0; font-size: 15px; color: #ffd700;
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; user-select: none;
+        }
+        h4:hover { opacity: 0.8; }
+        
+        .fold-arrow {
+            display: inline-block; margin-left: 8px; font-size: 10px; color: #aaa;
+            transition: transform 0.2s;
+        }
+        .section-container.collapsed .fold-arrow { transform: rotate(-90deg); }
+        .section-container.collapsed .fold-body { display: none; }
+        
+        .d-day { font-size: 12px; color: #ff6b6b; font-weight: bold; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; }
+        .perm-tag { font-size: 11px; color: #8f8; background: rgba(0,50,0,0.5); padding: 2px 6px; border-radius: 4px; }
+        .expired-tag { font-size: 11px; color: #aaa; background: rgba(80,80,80,0.8); padding: 2px 6px; border-radius: 4px; border: 1px solid #666; }
+
+        .btn-quick-del {
+            background: transparent; border: 1px solid #844; color: #f66;
+            font-size: 10px; cursor: pointer; border-radius: 3px; margin-left: 6px;
+            padding: 1px 5px; font-weight: bold;
+        }
+        .btn-quick-del:hover { background: #844; color: white; }
+
+        .sub-category {
+            font-size: 11px; color: #aaa; margin-top: 8px; margin-bottom: 3px;
+            border-bottom: 1px dashed #555; display: inline-block;
+        }
+
+        ul { list-style: none; padding: 0; margin: 0; }
+        li {
+            padding: 5px 2px; cursor: pointer; font-size: 13px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex; align-items: center;
+        }
+        li:hover { background-color: rgba(255, 255, 255, 0.15); }
+        li:last-child { border-bottom: none; }
+
+        .check-icon { margin-right: 8px; color: #aaa; min-width: 18px; text-align: center; }
+        .done { color: #777; opacity: 0.6; text-decoration: line-through; }
+        .done .check-icon { color: #4caf50; text-decoration: none; }
+
+        .counter-row {
+            background: rgba(0,0,0,0.3); padding: 6px; margin-top: 8px; border-radius: 4px;
+            border: 1px solid #444; transition: opacity 0.2s;
+        }
+        .counter-row.done { opacity: 0.5; background: rgba(0,0,0,0.5); }
+        .counter-row.done .counter-header { text-decoration: line-through; color: #888; }
+        .counter-row.done .counter-val { color: #4caf50; text-decoration: line-through; }
+
+        .counter-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+        .counter-val { color: #8cf; font-weight: bold; }
+        .counter-btns { display: flex; gap: 4px; justify-content: flex-end; }
+        .btn-count {
+            background: #334; color: #cdf; border: 1px solid #556;
+            font-size: 11px; padding: 3px 8px; cursor: pointer; border-radius: 3px; min-width: 30px;
+        }
+        .btn-count:hover { background: #445; color: white; }
+        .btn-count.minus { color: #fba; border-color: #644; background: #422; }
+
+        .event-footer {
+            margin-top: 8px; padding-top: 4px; border-top: 1px solid #444;
+            display: flex; justify-content: flex-end; align-items: center; gap: 10px;
+        }
+        .footer-date { font-size: 11px; color: #888; }
+        .btn-link {
+            background: #246; color: #cdf; border: 1px solid #468;
+            padding: 2px 6px; font-size: 11px; cursor: pointer; border-radius: 3px;
+            text-decoration: none; display: inline-block;
+        }
+        .btn-link:hover { background: #358; color: white; }
+
+        /* 하단 컨트롤 바 */
+        .control-bar {
+            height: 35px; min-height: 35px;
+            display: flex; align-items: center; justify-content: flex-end; gap: 5px;
+            border-top: 1px solid #555;
+            padding-top: 5px; margin-top: 5px;
+            flex-shrink: 0;
+        }
+        .status-msg { margin-right: auto; font-size: 11px; color: #aaa; margin-left: 4px; }
+        
+        .btn {
+            background: #444; color: #ccc; border: 1px solid #666;
+            padding: 4px 10px; 
+            cursor: pointer; font-size: 12px; border-radius: 4px;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .btn:hover { background: #666; color: white; }
+        .btn-help { width: 25px; padding: 4px 0; text-align: center; background: #446; border-color: #557; color:#cdf; font-weight:bold;}
+
+        /* ----------- [2. 설정(GUI) 모드] ----------- */
+        #editMode {
+            display: none; height: 100%; flex-direction: column;
+            background-color: #222; 
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 100;
+            padding: 8px;
+            box-sizing: border-box; 
+            border-radius: 8px;
+        }
+        
+        .edit-mode-header {
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+        
+        #editScrollArea { 
+            flex: 1; overflow-y: overlay; 
+            padding-right: 5px; 
+        }
+
+        .edit-group { margin-bottom: 25px; border: 1px solid #444; padding: 10px; border-radius: 6px; background: #2a2a2a; }
+        .edit-label { 
+            color: #ffd700; font-size: 15px; margin-bottom: 10px; font-weight: bold; border-bottom: 1px solid #555; padding-bottom: 5px; 
+            cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center;
+        }
+        .edit-label:hover { color: white; }
+        .edit-content.collapsed { display: none; } 
+
+        .edit-row { display: flex; margin-bottom: 5px; gap: 5px; align-items: center; }
+        .input-text { flex: 1; background: #333; border: 1px solid #555; color: white; padding: 5px; border-radius: 3px; caret-color: white !important;}
+        
+        .btn-del { background: #833; border: 1px solid #a55; color: white; width: 30px; border-radius: 3px; cursor: pointer; display:inline-flex; align-items:center; justify-content:center;}
+        
+        .btn-move { background: #446; border: 1px solid #557; color: #cdf; width: 25px; border-radius: 3px; cursor: pointer; font-size: 10px; padding: 5px 0; display:inline-flex; align-items:center; justify-content:center;}
+        .btn-move:hover { background: #558; color: white; }
+
+        .chk-opt { margin-right: 5px; cursor: pointer; }
+
+        .btn-add { width: 100%; background: #343; border: 1px solid #464; color: #cfc; margin-top: 5px; padding: 4px; border-radius: 3px; cursor: pointer; }
+        .event-box { background: #333; padding: 10px; margin-bottom: 15px; border-radius: 6px; border: 2px solid #555; }
+        .event-section-label { font-size: 12px; color: #8cf; margin-top: 10px; margin-bottom: 3px; font-weight: bold; }
+        .input-date-text { background: #222; color: white; border: 1px solid #555; width: 45%; font-size: 13px; padding: 4px; text-align: center; border-radius: 3px; caret-color: white !important;}
+        .input-tiny { width: 40px; background: #222; color: white; border: 1px solid #555; text-align: center; padding: 4px; border-radius: 3px; caret-color: white !important;}
+        .slash-sep { color: #888; font-size: 14px; font-weight: bold; }
+        
+        .safe-zone { height: 10px; width: 100%; }
+
+        /* 백업 섹션 */
+        .backup-section {
+            margin-top: 30px; 
+            padding: 15px;
+            background-color: #20232a; 
+            border: 2px solid #555; 
+            border-radius: 8px;
+        }
+        .backup-label { color: #a0aec0; font-size: 14px; font-weight: bold; margin-bottom: 8px; display: block; }
+        .backup-textarea {
+            width: 100%; height: 60px; background: #1a202c; border: 1px solid #4a5568;
+            color: #cbd5e0; font-size: 11px; margin-bottom: 5px; padding: 5px; box-sizing: border-box; resize: vertical;
+        }
+        .btn-backup { background: #2b6cb0; color: white; border: 1px solid #4299e1; padding: 5px 10px; font-size: 12px; cursor: pointer; border-radius: 3px; }
+        .btn-restore { background: #c53030; color: white; border: 1px solid #fc8181; padding: 5px 10px; font-size: 12px; cursor: pointer; border-radius: 3px; }
+
+        /* 요소 숨김용 */
+        .input-row-item:first-child .btn-move:nth-of-type(1),
+        .counter-item-row:first-child .btn-move:nth-of-type(1),
+        .group-wrapper > .event-box:first-child .btn-move:nth-of-type(1) { display: none; }
+        
+        .input-row-item:last-child .btn-move:nth-of-type(2),
+        .counter-item-row:last-child .btn-move:nth-of-type(2),
+        .group-wrapper > .event-box:last-child .btn-move:nth-of-type(2) { display: none; }
+
+        /* ----------- [3. 커스텀 팝업] ----------- */
+        .modal-overlay {
+            display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85); z-index: 200;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        #helpModal { padding: 20px; color: #eee; align-items: stretch; justify-content: flex-start; }
+        .help-content { flex: 1; overflow-y: auto; font-size: 13px; line-height: 1.6; }
+        .help-title { font-size: 16px; color: #ffd700; font-weight: bold; border-bottom: 1px solid #555; margin-bottom: 10px; padding-bottom: 5px; }
+        .help-close-btn { margin-top: 10px; padding: 8px; width: 100%; background: #444; border: 1px solid #666; color: white; cursor: pointer; }
+
+        .popup-box {
+            background: #333; border: 2px solid #666; border-radius: 8px;
+            padding: 20px; width: 80%; max-width: 300px; text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .popup-msg { color: #eee; font-size: 14px; margin-bottom: 20px; font-weight: bold; line-height: 1.5; white-space: pre-wrap; }
+        .popup-btns { display: flex; justify-content: center; gap: 10px; }
+        
+        .btn-conf { padding: 6px 15px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; border: 1px solid #555; }
+        .btn-conf.yes { background: #b33; color: white; border-color: #d55; }
+        .btn-conf.yes:hover { background: #d44; }
+        .btn-conf.no { background: #444; color: #ccc; }
+        .btn-conf.no:hover { background: #555; }
+        .btn-conf.ok { background: #2b6cb0; color: white; border-color: #4299e1; width: 80px; } 
+
+    </style>
+</head>
+<body>
+
+    <div id="viewMode">
+        <div class="header-bar" id="topHeader">
+            <button class="btn-fold" onclick="toggleFold()" title="접어두기"></button>
+            <div class="slider-container" id="sliderContainer" title="투명도 조절">
+                <div class="slider-track" id="sliderTrack">
+                    <div class="slider-thumb" id="sliderThumb"></div>
+                </div>
+            </div>
+        </div>
+        <div id="listArea"></div>
+        <div class="control-bar">
+            <span class="status-msg">ACT Todo v1.6</span>
+            <button class="btn btn-help" onclick="toggleHelp()">?</button>
+            <button class="btn" onclick="openEditMode()">⚙️ 목록 수정</button>
+        </div>
+    </div>
+
+    <div id="foldedIcon"></div>
+
+    <div id="editMode">
+        <div class="edit-mode-header">
+            <div style="font-size:16px; font-weight:bold; color:white; border-bottom:2px solid #555; padding-bottom:5px;">
+                ⚙️ 설정 편집
+            </div>
+        </div>
+        
+        <div id="editScrollArea"></div>
+        
+        <div style="border-top:1px solid #555; padding: 11px 0 3px 0; text-align:right; background:transparent; display:flex; justify-content:flex-end; gap:5px; flex-shrink:0;">
+            <button class="btn" style="background:#262; border-color:#484; color:white; font-weight:bold; padding: 4px 10px;" onclick="saveGUI()">💾 저장하기</button>
+            <button class="btn" style="background:#622; border-color:#844; padding: 4px 10px;" onclick="closeEditMode()">취소</button>
+        </div>
+    </div>
+
+    <div id="helpModal" class="modal-overlay">
+        <div class="help-title">💡 사용 가이드</div>
+        <div class="help-content">
+            <p>※ 게임창을 켜두고 키 입력시 게임이 우선되어 수정이 안됩니다.<br>
+            <b>-- ACT창을 띄워두고 수정해주세요 --</b></p>
+
+            <p><br><b>1. 기본 할일 관리</b><br>
+            - 일일: 매일 자정(00:00)에 자동 체크 해제<br>
+            - 주간: 매주 화요일 17:00에 자동 체크 해제<br></p>
+
+            <p><b>2. 커스텀 그룹/이벤트</b><br>
+            - ⚙️ 수정 버튼 > <b>[+ 새 그룹 추가]</b>로 생성<br>
+            - 기간이 있다면 날짜를, 없다면 <b>'기간 없음(상시)'</b> 체크<br>
+            - 날짜는 'YYYY-MM-DD'로 직접 입력<br>
+            - <b>기간이 만료되면</b> 목록이 사라지지 않고 <b>어둡게 표시</b>됨<br>
+            - 이벤트 내부에서 매일/매주/기간 내 할 일을 나눠서 관리 가능<br>
+            - 만료된 항목은 제목 옆 <b>[X]</b>버튼으로 즉시 삭제 가능<br>
+            - 입력창 앞 <b>체크박스</b>를 해제하면 <b>텍스트만 표시</b>됨 (단순 메모용)</p>
+
+            <p><b>3. 수치 카운터</b><br>
+            - 점수 모으기, 횟수 채우기 등에 사용<br>
+            - 카운터 이름 옆 숫자는 [시작수치]/[목표수치]를 나타냄(수정가능)<br>
+            - 버튼 추가 방법: 추가하고 싶은 수치 입력. 여러 버튼 추가시 쉼표(,)로 구분<br>
+            - 카운트다운(차감)은 버튼에 '-1' 입력<br><br>
+            예) 목표 3000점, 버튼에 '10, 100' 입력 시 [+10] [+100] 버튼 생성</p>
+            
+            <p><b>4. 자동 접기 & 애니메이션</b><br>
+            - 설정창 하단에서 '자동 접기' 및 '애니메이션 효과' 설정 가능<br>
+            - 마우스가 목록을 벗어나면 설정한 시간 뒤 자동으로 접힘</p>
+        </div>
+        <button class="help-close-btn" onclick="toggleHelp()">닫기</button>
+    </div>
+
+    <div id="confirmModal" class="modal-overlay">
+        <div class="popup-box">
+            <div class="popup-msg" id="confirmText">삭제하시겠습니까?</div>
+            <div class="popup-btns">
+                <button class="btn-conf yes" id="btnConfirmYes">삭제</button>
+                <button class="btn-conf no" onclick="closeConfirm()">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="alertModal" class="modal-overlay">
+        <div class="popup-box">
+            <div class="popup-msg" id="alertText">알림 내용</div>
+            <div class="popup-btns">
+                <button class="btn-conf ok" onclick="closeAlert()">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ICON_IMG_URL = "data:image/png;base64,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"; 
+
+        const STORAGE_KEY = 'act_todo_permanent_v1'; 
+        const STATE_KEY = 'act_todo_state_perm_v1';
+        const RESET_KEY = 'act_todo_reset_perm_v1';
+        const POS_KEY = 'act_todo_pos_v1'; 
+
+        const DEFAULT_DATA = {
+            daily: ["무작위: 레벨링", "무작위: 토벌전"],
+            weekly: ["쿠로의 공상 수첩"],
+            groups: [],
+            opacity: 1.0,
+            autoFold: false,
+            autoFoldSec: 10,
+            useAnimation: true 
+        };
+
+        let todoData = {};
+        let checkState = {};
+        let resetState = {};
+        let pendingAction = null; 
+        let isFolded = false; 
+        let autoFoldTimer = null;
+
+        let mouseStartX = 0; let mouseStartY = 0;
+        const foldIconEl = document.getElementById('foldedIcon');
+        const sliderContainer = document.getElementById('sliderContainer');
+        const sliderTrack = document.getElementById('sliderTrack');
+        const sliderThumb = document.getElementById('sliderThumb');
+        let isDraggingSlider = false;
+
+        foldIconEl.addEventListener('mousedown', (e) => {
+            mouseStartX = e.clientX; mouseStartY = e.clientY;
+        });
+        foldIconEl.addEventListener('mouseup', (e) => {
+            if(Math.abs(e.clientX - mouseStartX) < 3 && Math.abs(e.clientY - mouseStartY) < 3) toggleFold();
+        });
+
+        const viewModeEl = document.getElementById('viewMode');
+        viewModeEl.addEventListener('mouseenter', () => {
+            if(!isDraggingSlider && todoData.opacity < 1.0) {
+                let boosted = todoData.opacity + 0.2;
+                if(boosted > 1.0) boosted = 1.0;
+                viewModeEl.style.opacity = boosted;
+            }
+            if(autoFoldTimer) clearTimeout(autoFoldTimer);
+        });
+        
+        viewModeEl.addEventListener('mouseleave', () => {
+            if(!isDraggingSlider) viewModeEl.style.opacity = todoData.opacity;
+            startAutoFoldTimer();
+        });
+
+        function startAutoFoldTimer() {
+            if(autoFoldTimer) clearTimeout(autoFoldTimer);
+            if(todoData.autoFold && !isFolded 
+               && document.getElementById('editMode').style.display !== 'flex'
+               && document.getElementById('helpModal').style.display !== 'flex') {
+                
+                const sec = parseInt(todoData.autoFoldSec) || 10;
+                autoFoldTimer = setTimeout(() => {
+                    if(!isFolded) toggleFold();
+                }, sec * 1000);
+            }
+        }
+
+        sliderContainer.addEventListener('mousedown', startSliderDrag);
+        function startSliderDrag(e) {
+            isDraggingSlider = true;
+            updateSliderPosition(e.clientX); 
+            document.addEventListener('mousemove', onSliderDrag);
+            document.addEventListener('mouseup', stopSliderDrag);
+        }
+        function onSliderDrag(e) { if(isDraggingSlider) updateSliderPosition(e.clientX); }
+        function stopSliderDrag() {
+            isDraggingSlider = false;
+            document.removeEventListener('mousemove', onSliderDrag);
+            document.removeEventListener('mouseup', stopSliderDrag);
+        }
+        function updateSliderPosition(clientX) {
+            const rect = sliderTrack.getBoundingClientRect();
+            let percent = (clientX - rect.left) / rect.width;
+            if(percent < 0.1) percent = 0.1;
+            if(percent > 1.0) percent = 1.0;
+            sliderThumb.style.left = (percent * 100) + '%';
+            todoData.opacity = percent;
+            document.getElementById('viewMode').style.opacity = percent;
+        }
+
+        function loadAll() {
+            try { todoData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || DEFAULT_DATA; } catch(e) { todoData = DEFAULT_DATA; }
+            if(!todoData.daily) todoData.daily = [];
+            if(!todoData.weekly) todoData.weekly = [];
+            if(!todoData.groups) todoData.groups = [];
+            if(todoData.opacity === undefined) todoData.opacity = 1.0;
+            if(todoData.autoFold === undefined) todoData.autoFold = false;
+            if(todoData.autoFoldSec === undefined) todoData.autoFoldSec = 10;
+            if(todoData.useAnimation === undefined) todoData.useAnimation = true; 
+            
+            checkState = JSON.parse(localStorage.getItem(STATE_KEY)) || {};
+            resetState = JSON.parse(localStorage.getItem(RESET_KEY)) || { daily: 0, weekly: 0 };
+            
+            const posData = JSON.parse(localStorage.getItem(POS_KEY));
+            
+            if(posData && posData.folded) { 
+                isFolded = true; 
+                applyFoldState(false); 
+            } else {
+                applyFoldState(false);
+            }
+            updateFoldIcon(); 
+            
+            setTimeout(() => { sliderThumb.style.left = '100%'; viewModeEl.style.opacity = 1.0; startAutoFoldTimer(); }, 0);
+        }
+
+        function toggleFold() {
+            isFolded = !isFolded;
+            let posData = JSON.parse(localStorage.getItem(POS_KEY)) || {};
+            posData.folded = isFolded;
+            localStorage.setItem(POS_KEY, JSON.stringify(posData));
+            applyFoldState(true); 
+            if(!isFolded) startAutoFoldTimer();
+        }
+
+        function applyFoldState(animate) {
+            const viewMode = document.getElementById('viewMode');
+            const foldedIcon = document.getElementById('foldedIcon');
+            const body = document.body;
+
+            if(!todoData.useAnimation) animate = false;
+
+            if (isFolded) {
+                if (animate) {
+                    viewMode.classList.add('fading-out');
+                    setTimeout(() => {
+                        viewMode.classList.add('hidden');
+                        viewMode.classList.remove('fading-out'); 
+                        
+                        foldedIcon.style.display = 'flex';
+                        void foldedIcon.offsetWidth; 
+                        foldedIcon.classList.add('visible');
+                    }, 100); 
+                } else {
+                    viewMode.classList.add('hidden');
+                    foldedIcon.style.display = 'flex';
+                    foldedIcon.classList.add('visible');
+                }
+                body.classList.add('transparent-mode');
+                if(autoFoldTimer) clearTimeout(autoFoldTimer);
+            } else {
+                if (animate) {
+                    foldedIcon.classList.remove('visible');
+                    setTimeout(() => {
+                        foldedIcon.style.display = 'none';
+                        
+                        viewMode.classList.remove('hidden');
+                        viewMode.classList.add('fading-out'); 
+                        void viewMode.offsetWidth; 
+                        viewMode.classList.remove('fading-out'); 
+                    }, 100); 
+                } else {
+                    foldedIcon.style.display = 'none';
+                    foldedIcon.classList.remove('visible');
+                    viewMode.classList.remove('hidden');
+                }
+                body.classList.remove('transparent-mode');
+            }
+        }
+
+        function updateFoldIcon() {
+            const iconDiv = document.getElementById('foldedIcon');
+            if(todoData.iconUrl && todoData.iconUrl.trim() !== "") {
+                iconDiv.style.backgroundImage = `url('${todoData.iconUrl}')`; iconDiv.innerText = ""; 
+            } else if(ICON_IMG_URL && ICON_IMG_URL.trim() !== "") {
+                iconDiv.style.backgroundImage = `url('${ICON_IMG_URL}')`; iconDiv.innerText = ""; 
+            } else {
+                iconDiv.style.backgroundImage = "none"; iconDiv.innerText = "📝";
+            }
+        }
+
+        // ★ [데이터 저장 헬퍼]
+        function saveTodoData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(todoData));
+        }
+
+        function toggleSection(uniqueId) {
+            checkState[uniqueId] = !checkState[uniqueId];
+            localStorage.setItem(STATE_KEY, JSON.stringify(checkState));
+            render();
+        }
+
+        function render() {
+            const listArea = document.getElementById('listArea');
+            listArea.innerHTML = '';
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+
+            renderSimpleGroup(listArea, "☀ 일일", todoData.daily, 'daily');
+            renderSimpleGroup(listArea, "📅 주간", todoData.weekly, 'weekly');
+
+            todoData.groups.forEach((grp, idx) => {
+                let isExpired = false; let show = false;
+                if(grp.noDate) show = true; 
+                else if(isValidDate(grp.start) && isValidDate(grp.end)) {
+                    if (todayStr >= grp.start && todayStr <= grp.end) show = true;
+                    else if (todayStr > grp.end) { show = true; isExpired = true; }
+                }
+                if (show) renderCustomGroup(listArea, grp, idx, isExpired);
+            });
+            checkAutoReset(); updateFoldIcon();
+        }
+
+        function renderSimpleGroup(container, title, tasks, prefix) {
+            if (!tasks || tasks.length === 0) return;
+            const foldKey = 'fold_' + prefix;
+            const isCollapsed = checkState[foldKey] === true;
+            const div = createSectionDiv(title, "", false, -1, foldKey, isCollapsed);
+            const body = document.createElement('div'); body.className = 'fold-body';
+            const ul = document.createElement('ul');
+            tasks.forEach(task => ul.appendChild(createTaskItem(task, `${prefix}_${task}`)));
+            body.appendChild(ul); div.appendChild(body); container.appendChild(div);
+        }
+
+        function renderCustomGroup(container, grp, idx, isExpired) {
+            const hasD = grp.tasks_daily?.length > 0;
+            const hasW = grp.tasks_weekly?.length > 0;
+            const hasO = grp.tasks_once?.length > 0;
+            const hasC = grp.counters?.length > 0;
+            if (!hasD && !hasW && !hasO && !hasC) return;
+
+            let rightText = "";
+            if(isExpired) rightText = "<span class='expired-tag'>기간 만료</span>";
+            else if(grp.noDate) rightText = "<span class='perm-tag'>상시</span>";
+            else rightText = getDdayString(grp.end);
+
+            const foldKey = 'fold_group_' + idx;
+            const isCollapsed = checkState[foldKey] === true;
+            const div = createSectionDiv(grp.title, rightText, isExpired, idx, foldKey, isCollapsed);
+            const body = document.createElement('div'); body.className = 'fold-body';
+
+            if (hasD) { body.appendChild(createSubHeader("일일")); const ul=document.createElement('ul'); grp.tasks_daily.forEach(t=>ul.appendChild(createTaskItem(t, `gd_${idx}_${t}`))); body.appendChild(ul); }
+            if (hasW) { body.appendChild(createSubHeader("주간")); const ul=document.createElement('ul'); grp.tasks_weekly.forEach(t=>ul.appendChild(createTaskItem(t, `gw_${idx}_${t}`))); body.appendChild(ul); }
+            if (hasO) { body.appendChild(createSubHeader("목표")); const ul=document.createElement('ul'); grp.tasks_once.forEach(t=>ul.appendChild(createTaskItem(t, `go_${idx}_${t}`))); body.appendChild(ul); }
+            // ★ [수정] 카운터 렌더링 시 그룹 객체(cnt) 자체를 넘김
+            if(hasC) { grp.counters.forEach((cnt) => body.appendChild(createCounterItem(cnt))); }
+            
+            const footer = document.createElement('div'); footer.className = 'event-footer';
+            let hasFooterContent = false;
+            if(!grp.noDate) {
+                const dateSpan = document.createElement('span'); dateSpan.className = 'footer-date';
+                dateSpan.innerText = `~ ${grp.end.replace(/-/g, '.')} 종료`;
+                footer.appendChild(dateSpan); hasFooterContent = true;
+            }
+            if(grp.url && grp.url.trim() !== "") {
+                const linkBtn = document.createElement('button'); linkBtn.className = 'btn-link';
+                linkBtn.innerText = '🌐 WEB'; linkBtn.onclick = () => window.open(grp.url, '_blank');
+                footer.appendChild(linkBtn); hasFooterContent = true;
+            }
+            if(hasFooterContent) body.appendChild(footer);
+            div.appendChild(body); container.appendChild(div);
+        }
+
+        function createSectionDiv(title, rightHtml="", isExpired=false, idx=-1, foldKey="", isCollapsed=false) {
+            const div = document.createElement('div'); div.className = 'section-container';
+            if(isExpired) div.classList.add('expired'); if(isCollapsed) div.classList.add('collapsed');
+            const h4 = document.createElement('h4');
+            if(foldKey) h4.onclick = () => toggleSection(foldKey);
+            let rightPart = `<div style="display:flex; align-items:center;">`;
+            if(rightHtml) rightHtml.includes('<') ? rightPart += rightHtml : rightPart += `<span class="d-day">${rightHtml}</span>`;
+            if(isExpired) rightPart += `<button class="btn-quick-del" onclick="event.stopPropagation(); deleteExpiredGroup(${idx})">X</button>`;
+            rightPart += `<span class="fold-arrow">▼</span></div>`;
+            h4.innerHTML = `<span>${title}</span>` + rightPart;
+            div.appendChild(h4); return div;
+        }
+
+        // ★ [수정] 카운터 로직: 데이터를 객체(cntData)에 직접 저장
+        function createCounterItem(cntData) {
+            // 더 이상 checkState를 읽지 않고, 객체의 current 값을 직접 사용
+            let currentVal = parseInt(cntData.current) || 0;
+            let targetVal = parseInt(cntData.target) || 0;
+            
+            const div = document.createElement('div'); div.className = 'counter-row';
+            if(currentVal >= targetVal) div.classList.add('done');
+            div.innerHTML = `<div class="counter-header"><span>${cntData.label}</span> <span class="counter-val">${currentVal} / ${cntData.target}</span></div>`;
+            
+            const btnRow = document.createElement('div'); btnRow.className = 'counter-btns';
+            cntData.steps.split(',').map(s=>s.trim()).forEach(stepStr => {
+                const step = parseInt(stepStr); if(isNaN(step)) return;
+                const btn = document.createElement('button'); btn.className = 'btn-count' + (step<0?' minus':'');
+                btn.innerText = (step > 0 ? '+' : '') + step;
+                btn.onclick = () => {
+                    // ★ [수정] 객체 값 업데이트 후 메인 데이터 저장
+                    cntData.current = currentVal + step;
+                    saveTodoData(); // 메인 저장소(todoData) 업데이트
+                    render();
+                };
+                btnRow.appendChild(btn);
+            });
+            div.appendChild(btnRow); return div;
+        }
+
+        function createTaskItem(text, uniqueId) {
+            const isNoCheck = text.startsWith('[*] ');
+            const realText = isNoCheck ? text.substring(4) : text;
+
+            const li = document.createElement('li');
+            if (isNoCheck) {
+                li.innerHTML = `<span style="display:inline-block; width:20px;"></span>${realText}`;
+                li.style.cursor = "default";
+                li.style.color = "#ccc"; 
+            } else {
+                const isDone = checkState[uniqueId] === true;
+                li.innerHTML = `<span class="check-icon">${isDone ? '■' : '□'}</span> ${realText}`;
+                if(isDone) li.classList.add('done');
+                li.onclick = () => {
+                    checkState[uniqueId] = !checkState[uniqueId];
+                    localStorage.setItem(STATE_KEY, JSON.stringify(checkState)); render();
+                };
+            }
+            return li;
+        }
+        function createSubHeader(text) {
+            const span = document.createElement('span'); span.className = 'sub-category'; span.innerText = text; return span;
+        }
+        window.toggleEditGroup = function(header) {
+            const content = header.nextElementSibling;
+            if(content) {
+                content.style.display = (content.style.display === 'none') ? 'block' : 'none';
+                header.querySelector('.fold-arrow').style.transform = (content.style.display === 'none') ? 'rotate(-90deg)' : 'rotate(0deg)';
+            }
+        };
+
+        function openEditMode() {
+            const container = document.getElementById('editScrollArea'); container.innerHTML = '';
+            createSimpleEditor(container, '일일 (매일 리셋)', todoData.daily);
+            createSimpleEditor(container, '주간 (화요일 리셋)', todoData.weekly);
+            
+            const grpHeader = document.createElement('div'); grpHeader.className = 'edit-label';
+            grpHeader.style.marginTop = '20px'; grpHeader.innerText = '커스텀 그룹 관리'; container.appendChild(grpHeader);
+            const grpWrapper = document.createElement('div'); grpWrapper.className = 'group-wrapper';
+            todoData.groups.forEach(grp => grpWrapper.appendChild(createGroupEditor(grp)));
+            container.appendChild(grpWrapper);
+            
+            const addBtn = document.createElement('button'); addBtn.className = 'btn-add';
+            addBtn.style.background = '#446'; addBtn.innerText = '+ 새 그룹 추가';
+            addBtn.onclick = () => {
+                const today = new Date().toISOString().split('T')[0];
+                grpWrapper.appendChild(createGroupEditor({ title: "", noDate: false, start: today, end: today, url: "", tasks_daily: [], tasks_weekly: [], tasks_once: [], counters: [] }));
+            };
+            container.appendChild(addBtn);
+            
+            const iconHeader = document.createElement('div'); iconHeader.className = 'edit-label';
+            iconHeader.style.marginTop = '30px'; iconHeader.innerText = '접기 아이콘 설정'; container.appendChild(iconHeader);
+            container.appendChild(createInputRowWithVal(todoData.iconUrl || '', 'inputIconUrl', '아이콘 이미지 URL'));
+            const iconHelp = document.createElement('div'); iconHelp.style.fontSize = '11px'; iconHelp.style.color='#aaa'; iconHelp.style.marginTop='5px';
+            iconHelp.innerText = "※ Base64로 인코딩된 이미지 사용 가능"; container.appendChild(iconHelp);
+
+            const sep = document.createElement('div');
+            sep.style.borderTop = '1px dashed #555';
+            sep.style.margin = '25px 0 10px 0';
+            container.appendChild(sep);
+
+            const autoFoldHeader = document.createElement('div'); autoFoldHeader.className = 'edit-label';
+            autoFoldHeader.innerText = '자동 접기 & 애니메이션'; container.appendChild(autoFoldHeader);
+            
+            const animRow = document.createElement('div'); animRow.className='edit-row';
+            animRow.style.background = '#222'; animRow.style.padding='10px'; animRow.style.borderRadius='4px'; animRow.style.marginBottom='5px';
+            animRow.innerHTML = `
+                <div style="display:flex; align-items:center; width:100%;">
+                    <input type="checkbox" id="chkUseAnim" ${todoData.useAnimation ? 'checked' : ''} style="margin-right:8px;">
+                    <label for="chkUseAnim" style="color:#eee; font-size:13px;">애니메이션 효과 사용</label>
+                </div>
+            `;
+            container.appendChild(animRow);
+
+            const afRow = document.createElement('div'); afRow.className='edit-row';
+            afRow.style.background = '#222'; afRow.style.padding='10px'; afRow.style.borderRadius='4px';
+            afRow.innerHTML = `
+                <div style="display:flex; align-items:center; width:100%;">
+                    <input type="checkbox" id="chkAutoFold" ${todoData.autoFold ? 'checked' : ''} style="margin-right:8px;">
+                    <label for="chkAutoFold" style="color:#eee; font-size:13px; margin-right:auto;">자동 접기 사용</label>
+                    <input type="number" id="inputAutoFoldSec" class="input-tiny" value="${todoData.autoFoldSec || 10}" style="width:50px;">
+                    <span style="color:#aaa; font-size:12px; margin-left:5px;">초 후 접기</span>
+                </div>
+            `;
+            container.appendChild(afRow);
+
+            const backupDiv = document.createElement('div'); backupDiv.className = 'backup-section';
+            backupDiv.innerHTML = `
+                <div class="edit-label" style="border:none;">📦 데이터 백업/복원</div>
+                <span class="backup-label">1. 데이터 추출 (Export)</span>
+                <textarea id="exportArea" class="backup-textarea" readonly placeholder="이곳에 생성된 코드는 자동으로 클립보드에 복사됩니다. 메모장 등에 붙여넣어 안전하게 보관하세요."></textarea>
+                <div style="text-align:right; margin-bottom:15px;">
+                    <button class="btn-backup" onclick="exportData()">📤 데이터 추출</button>
+                </div>
+                <span class="backup-label">2. 데이터 복원 (Import)</span>
+                <textarea id="importArea" class="backup-textarea" placeholder="여기에 백업 코드를 붙여넣기(Ctrl+V) 하고 [데이터 복원] 버튼을 누르세요."></textarea>
+                <div style="text-align:right;">
+                    <button class="btn-restore" onclick="importData()">📥 데이터 복원</button>
+                </div>
+            `;
+            container.appendChild(backupDiv);
+
+            const spacer = document.createElement('div'); spacer.style.height = "50px"; container.appendChild(spacer);
+            document.getElementById('viewMode').style.display = 'none'; document.getElementById('editMode').style.display = 'flex';
+        }
+
+        window.exportData = function() {
+            const backupObj = {
+                v: "1.6",
+                todoData: JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"),
+                checkState: JSON.parse(localStorage.getItem(STATE_KEY) || "{}"),
+                resetState: JSON.parse(localStorage.getItem(RESET_KEY) || "{}")
+            };
+            const str = JSON.stringify(backupObj);
+            const area = document.getElementById('exportArea');
+            area.value = str;
+            area.select();
+            
+            try {
+                document.execCommand('copy');
+                showAlert("데이터가 클립보드에 복사되었습니다.\n메모장에 붙여넣기(Ctrl+V)하여 보관하세요.");
+            } catch (err) {
+                showAlert("자동 복사에 실패했습니다.\n아래 텍스트를 직접 복사하세요.");
+            }
+        };
+
+        window.importData = function() {
+            const str = document.getElementById('importArea').value.trim();
+            if(!str) { showAlert("복원할 코드를 입력해주세요."); return; }
+            try {
+                const backupObj = JSON.parse(str);
+                if(!backupObj.todoData) throw new Error("데이터 형식이 올바르지 않습니다.");
+                
+                showConfirm("현재 데이터가 모두 사라지고 백업본으로 교체됩니다.\n진행하시겠습니까?", () => {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(backupObj.todoData));
+                    localStorage.setItem(STATE_KEY, JSON.stringify(backupObj.checkState || {}));
+                    localStorage.setItem(RESET_KEY, JSON.stringify(backupObj.resetState || {}));
+                    showAlert("복원 완료! 화면을 새로고침합니다.");
+                    setTimeout(() => location.reload(), 1500);
+                }, "교체");
+            } catch(e) {
+                showAlert("복원 실패: 올바르지 않은 데이터입니다.\n" + e.message);
+            }
+        };
+
+        function createInputRowWithVal(val, id, ph) {
+            const div = document.createElement('div'); div.className='edit-row';
+            div.innerHTML = `<input type="text" id="${id}" class="input-text" value="${val}" placeholder="${ph}">`;
+            return div;
+        }
+
+        function createSimpleEditor(container, labelText, arrayData) {
+            const group = document.createElement('div'); group.className = 'edit-group';
+            group.innerHTML = `<div class="edit-label" onclick="toggleEditGroup(this)">${labelText}<span class="fold-arrow" style="margin-left:auto; display:inline-block; transition:transform 0.2s">▼</span></div>`;
+            const body = document.createElement('div'); body.className = 'edit-content'; 
+            const listDiv = document.createElement('div');
+            arrayData.forEach(txt => listDiv.appendChild(createInputRow(txt)));
+            body.appendChild(listDiv);
+            const addBtn = document.createElement('button'); addBtn.className = 'btn-add'; addBtn.innerText = '+ 항목 추가';
+            addBtn.onclick = () => listDiv.appendChild(createInputRow(""));
+            body.appendChild(addBtn); group.appendChild(body); container.appendChild(group);
+        }
+
+        function createGroupEditor(grp) {
+            const box = document.createElement('div'); box.className = 'event-box';
+            
+            const titleRow = document.createElement('div'); titleRow.className = 'edit-row';
+            titleRow.style.alignItems = 'center'; 
+
+            const titleInput = document.createElement('input'); 
+            titleInput.type = 'text'; 
+            titleInput.className = 'input-text g-title'; 
+            titleInput.value = grp.title; 
+            titleInput.placeholder = "그룹 이름";
+            titleRow.appendChild(titleInput);
+
+            const gUp = document.createElement('button'); gUp.className='btn-move'; gUp.innerText='▲';
+            gUp.onclick = () => { if(box.previousElementSibling) box.parentNode.insertBefore(box, box.previousElementSibling); };
+            titleRow.appendChild(gUp);
+
+            const gDown = document.createElement('button'); gDown.className='btn-move'; gDown.innerText='▼';
+            gDown.onclick = () => { if(box.nextElementSibling) box.parentNode.insertBefore(box.nextElementSibling, box); };
+            titleRow.appendChild(gDown);
+
+            const foldArrow = document.createElement('span');
+            foldArrow.className = 'fold-arrow';
+            foldArrow.innerText = '▼';
+            foldArrow.style.marginLeft = '10px';
+            foldArrow.style.cursor = 'pointer';
+            foldArrow.style.fontSize = '10px'; 
+            foldArrow.style.color = '#aaa';
+            foldArrow.onclick = () => {
+                const content = box.querySelector('.edit-content');
+                const isHidden = content.style.display === 'none';
+                content.style.display = isHidden ? 'block' : 'none';
+                foldArrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(-90deg)';
+            };
+            titleRow.appendChild(foldArrow);
+
+            box.appendChild(titleRow);
+
+            const body = document.createElement('div'); body.className = 'edit-content'; 
+            const dateRow = document.createElement('div'); dateRow.className = 'edit-row';
+            dateRow.style.justifyContent = 'space-between'; dateRow.style.background = '#222'; dateRow.style.padding='5px'; dateRow.style.borderRadius='4px';
+            const chkId = Math.random().toString(36).substring(7);
+            const isNoDate = grp.noDate === true;
+            dateRow.innerHTML = `
+                <div style="display:flex; align-items:center;">
+                    <input type="checkbox" id="${chkId}" class="g-nodate" ${isNoDate ? 'checked' : ''}>
+                    <label for="${chkId}" style="font-size:12px; margin-left:5px; color:#aaa;">기간 없음 (상시)</label>
+                </div>
+                <div class="date-inputs" style="display:${isNoDate ? 'none' : 'flex'}; gap:5px; align-items:center;">
+                    <input type="text" class="input-date-text g-start" value="${grp.start}" placeholder="시작일"> ~ <input type="text" class="input-date-text g-end" value="${grp.end}" placeholder="종료일">
+                </div>
+            `;
+            body.appendChild(dateRow);
+            setTimeout(() => {
+                const chk = box.querySelector(`#${chkId}`); const area = box.querySelector('.date-inputs');
+                chk.onchange = () => { area.style.display = chk.checked ? 'none' : 'flex'; };
+            }, 0);
+            body.innerHTML += `<div class="edit-row"><input type="text" class="input-text g-url" value="${grp.url || ''}" placeholder="URL (선택)"></div>`;
+
+            const createSubList = (label, dataArr, classPrefix) => {
+                const labelDiv = document.createElement('div'); labelDiv.className = 'event-section-label'; labelDiv.innerText = label; body.appendChild(labelDiv);
+                const listDiv = document.createElement('div'); listDiv.className = classPrefix; 
+                if(dataArr) dataArr.forEach(t => listDiv.appendChild(createInputRow(t)));
+                body.appendChild(listDiv);
+                const sBtn = document.createElement('button'); sBtn.className = 'btn'; sBtn.style.width='100%'; sBtn.innerText = '+';
+                sBtn.onclick = () => listDiv.appendChild(createInputRow("")); body.appendChild(sBtn);
+            };
+            createSubList("① 일일", grp.tasks_daily, 'sub-daily');
+            createSubList("② 주간", grp.tasks_weekly, 'sub-weekly');
+            createSubList("③ 상시/목표", grp.tasks_once, 'sub-once');
+
+            const cntLabel = document.createElement('div'); cntLabel.className = 'event-section-label'; cntLabel.innerText = '🔢 수치 카운터'; body.appendChild(cntLabel);
+            const cntList = document.createElement('div'); cntList.className = 'sub-counters';
+            if(grp.counters) grp.counters.forEach(c => cntList.appendChild(createCounterEditRow(c)));
+            body.appendChild(cntList);
+            const addCntBtn = document.createElement('button'); addCntBtn.className = 'btn'; addCntBtn.style.width='100%'; addCntBtn.innerText = '+ 카운터 추가';
+            addCntBtn.onclick = () => cntList.appendChild(createCounterEditRow({label:"", target:100, current:0, steps:"10, -10"}));
+            body.appendChild(addCntBtn);
+
+            const delMainBtn = document.createElement('button'); delMainBtn.className = 'btn-del';
+            delMainBtn.style.width = '100%'; delMainBtn.style.marginTop = '15px'; delMainBtn.innerText = '이 그룹 삭제';
+            delMainBtn.onclick = () => { showConfirm("이 그룹을 삭제하시겠습니까?", () => box.remove()); };
+            body.appendChild(delMainBtn);
+            box.appendChild(body); return box;
+        }
+
+        function createInputRow(val) {
+            const row = document.createElement('div'); row.className = 'edit-row input-row-item';
+            
+            const isNoCheck = val.startsWith('[*] ');
+            const realVal = isNoCheck ? val.substring(4) : val;
+
+            const chk = document.createElement('input');
+            chk.type = 'checkbox';
+            chk.className = 'chk-opt';
+            chk.checked = !isNoCheck; 
+            chk.title = "체크 시 체크박스 표시, 해제 시 텍스트만 표시";
+            row.appendChild(chk);
+
+            const input = document.createElement('input'); input.type = 'text'; input.className = 'input-text'; 
+            input.value = realVal; 
+            row.appendChild(input);
+
+            const btnUp = document.createElement('button'); btnUp.className = 'btn-move'; btnUp.innerText = '▲';
+            btnUp.onclick = () => { if(row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling); };
+            const btnDown = document.createElement('button'); btnDown.className = 'btn-move'; btnDown.innerText = '▼';
+            btnDown.onclick = () => { if(row.nextElementSibling) row.parentNode.insertBefore(row.nextElementSibling, row); };
+            const btnDel = document.createElement('button'); btnDel.className = 'btn-del'; btnDel.innerText = 'X';
+            btnDel.onclick = () => row.remove();
+            row.appendChild(btnUp); row.appendChild(btnDown); row.appendChild(btnDel); return row;
+        }
+        function createCounterEditRow(cData) {
+            const row = document.createElement('div'); row.className = 'edit-row counter-item-row';
+            row.style.background = '#282828'; row.style.padding='5px'; row.style.flexWrap='wrap';
+            row.innerHTML = `<input type="text" class="input-text c-label" value="${cData.label}" placeholder="이름"><input type="text" class="input-tiny c-curr" value="${cData.current}" placeholder="현재"><span class="slash-sep">/</span><input type="text" class="input-tiny c-target" value="${cData.target}" placeholder="목표"><input type="text" class="input-text c-steps" value="${cData.steps}" placeholder="버튼" style="flex:2;">`;
+            const btnUp = document.createElement('button'); btnUp.className = 'btn-move'; btnUp.innerText = '▲';
+            btnUp.onclick = () => { if(row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling); };
+            const btnDown = document.createElement('button'); btnDown.className = 'btn-move'; btnDown.innerText = '▼';
+            btnDown.onclick = () => { if(row.nextElementSibling) row.parentNode.insertBefore(row.nextElementSibling, row); };
+            const btnDel = document.createElement('button'); btnDel.className = 'btn-del'; btnDel.innerText = 'X';
+            btnDel.onclick = () => row.remove();
+            row.appendChild(btnUp); row.appendChild(btnDown); row.appendChild(btnDel); return row;
+        }
+        function saveGUI() {
+            const extractList = (parentDom) => Array.from(parentDom.querySelectorAll('.input-row-item')).map(row => {
+                const textInput = row.querySelector('.input-text');
+                const chk = row.querySelector('.chk-opt');
+                const text = textInput.value.trim();
+                
+                if (!text) return null;
+                return chk.checked ? text : `[*] ${text}`;
+            }).filter(v => v);
+
+            todoData.daily = extractList(document.querySelector('.edit-group:nth-child(1)'));
+            todoData.weekly = extractList(document.querySelector('.edit-group:nth-child(2)'));
+            const grpBoxes = document.querySelectorAll('.event-box');
+            todoData.groups = Array.from(grpBoxes).map(box => {
+                const title = box.querySelector('.g-title').value.trim();
+                if(!title) return null;
+                const counters = Array.from(box.querySelectorAll('.counter-item-row')).map(crow => ({
+                    label: crow.querySelector('.c-label').value.trim(),
+                    target: crow.querySelector('.c-target').value,
+                    current: crow.querySelector('.c-curr').value,
+                    steps: crow.querySelector('.c-steps').value.trim()
+                })).filter(c => c.label);
+                return {
+                    title,
+                    noDate: box.querySelector('.g-nodate').checked,
+                    start: box.querySelector('.g-start').value.trim(),
+                    end: box.querySelector('.g-end').value.trim(),
+                    url: box.querySelector('.g-url').value.trim(),
+                    counters,
+                    tasks_daily: extractList(box.querySelector('.sub-daily')),
+                    tasks_weekly: extractList(box.querySelector('.sub-weekly')),
+                    tasks_once: extractList(box.querySelector('.sub-once'))
+                };
+            }).filter(e => e);
+            todoData.iconUrl = document.getElementById('inputIconUrl').value.trim();
+            todoData.autoFold = document.getElementById('chkAutoFold').checked;
+            todoData.autoFoldSec = document.getElementById('inputAutoFoldSec').value;
+            todoData.useAnimation = document.getElementById('chkUseAnim').checked;
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(todoData));
+            closeEditMode(); render();
+        }
+        function deleteExpiredGroup(idx) {
+            showConfirm("이 그룹을 삭제하시겠습니까?", () => { todoData.groups.splice(idx, 1); localStorage.setItem(STORAGE_KEY, JSON.stringify(todoData)); render(); });
+        }
+        function toggleHelp() { 
+            const modal = document.getElementById('helpModal'); 
+            modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex'; 
+            
+            if(modal.style.display === 'flex') {
+                if(autoFoldTimer) clearTimeout(autoFoldTimer);
+            } else {
+                startAutoFoldTimer();
+            }
+        }
+        
+        function showConfirm(msg, yesCallback, btnText = "삭제") {
+            document.getElementById('confirmText').innerText = msg;
+            document.getElementById('btnConfirmYes').innerText = btnText;
+            pendingAction = yesCallback;
+            document.getElementById('confirmModal').style.display = 'flex';
+        }
+        function closeConfirm() { document.getElementById('confirmModal').style.display = 'none'; pendingAction = null; }
+        
+        function showAlert(msg) {
+            document.getElementById('alertText').innerText = msg;
+            document.getElementById('alertModal').style.display = 'flex';
+        }
+        function closeAlert() { document.getElementById('alertModal').style.display = 'none'; }
+
+        document.getElementById('btnConfirmYes').onclick = () => { if(pendingAction) pendingAction(); closeConfirm(); };
+        
+        function closeEditMode() { 
+            document.getElementById('editMode').style.display = 'none'; 
+            document.getElementById('viewMode').style.display = 'flex'; 
+            startAutoFoldTimer(); 
+        }
+        function checkAutoReset() {
+            const now = new Date(); const d = now.getDate();
+            if (resetState.daily !== d) {
+                for (let k in checkState) if (k.startsWith('daily_') || k.startsWith('gd_')) checkState[k] = false;
+                resetState.daily = d; localStorage.setItem(STATE_KEY, JSON.stringify(checkState)); localStorage.setItem(RESET_KEY, JSON.stringify(resetState)); render();
+            }
+            const nextW = getNextWeeklyResetTime();
+            if (!resetState.weeklyTarget) { resetState.weeklyTarget = nextW.getTime(); localStorage.setItem(RESET_KEY, JSON.stringify(resetState)); }
+            else if (now.getTime() > resetState.weeklyTarget) {
+                for (let k in checkState) if (k.startsWith('weekly_') || k.startsWith('gw_')) checkState[k] = false;
+                resetState.weeklyTarget = nextW.getTime(); localStorage.setItem(STATE_KEY, JSON.stringify(checkState)); localStorage.setItem(RESET_KEY, JSON.stringify(resetState)); render();
+            }
+        }
+        function getNextWeeklyResetTime() { const d = new Date(); const day = d.getDay(); const t = new Date(d); t.setDate(d.getDate() - day + 2); t.setHours(17,0,0,0); if(d > t) t.setDate(t.getDate() + 7); return t; }
+        function isValidDate(d) { return /^\d{4}-\d{2}-\d{2}$/.test(d); }
+        function getDdayString(endDateStr) {
+            const now = new Date(); now.setHours(0,0,0,0); const end = new Date(endDateStr);
+            const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24)); return diff === 0 ? "D-Day" : (diff > 0 ? "D-" + diff : "END");
+        }
+
+        loadAll(); render(); setInterval(checkAutoReset, 60000);
+    </script>
+</body>
+</html>
