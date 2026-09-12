@@ -72,22 +72,6 @@
         .btn-fold:hover { background: #555; color: white; }
         .btn-fold::after { content: "－"; } 
 
-        /* 슬라이더 */
-        .slider-container {
-            width: 80px; height: 20px;
-            display: flex; align-items: center;
-            cursor: pointer; padding: 0 5px; opacity: 0.3; transition: opacity 0.2s;
-        }
-        .slider-container:hover { opacity: 1.0; }
-        .slider-track {
-            width: 100%; height: 4px; background: #555; border-radius: 2px; position: relative;
-        }
-        .slider-thumb {
-            width: 12px; height: 12px; background: #ffd700; border-radius: 50%;
-            position: absolute; top: 50%; left: 100%; transform: translate(-50%, -50%);
-            box-shadow: 0 0 2px black; pointer-events: none;
-        }
-
         /* 아이콘 */
         #foldedIcon {
             display: none;
@@ -171,6 +155,7 @@
         .done { color: #777; opacity: 0.6; text-decoration: line-through; }
         .done .check-icon { color: #4caf50; text-decoration: none; }
 
+        /* 카운터 스타일 */
         .counter-row {
             background: rgba(0,0,0,0.3); padding: 6px; margin-top: 8px; border-radius: 4px;
             border: 1px solid #444; transition: opacity 0.2s;
@@ -179,7 +164,7 @@
         .counter-row.done .counter-header { text-decoration: line-through; color: #888; }
         .counter-row.done .counter-val { color: #4caf50; text-decoration: line-through; }
 
-        .counter-header { display: flex; flex-direction: column; font-size: 12px; margin-bottom: 5px; gap: 4px; }
+        .counter-header { display: flex; flex-direction: column; font-size: 12px; margin-bottom: 5px; gap: 4px;}
         .counter-val { color: #8cf; font-weight: bold; }
         .counter-btns { display: flex; gap: 4px; justify-content: flex-end; }
         .btn-count {
@@ -250,6 +235,10 @@
         .btn-move:hover { background: #558; color: white; }
 
         .chk-opt { margin-right: 5px; cursor: pointer; }
+        
+        /* 토글 버튼 스타일 (퍼센트/바) */
+        .btn-toggle { background: #333; color: #777; border: 1px solid #555; border-radius: 3px; cursor: pointer; padding: 3px 6px; font-size: 11px; margin-left: 2px; transition: all 0.2s;}
+        .btn-toggle.on { background: #4caf50; color: white; border-color: #4caf50; }
 
         .btn-add { width: 100%; background: #343; border: 1px solid #464; color: #cfc; margin-top: 5px; padding: 4px; border-radius: 3px; cursor: pointer; }
         .event-box { background: #333; padding: 10px; margin-bottom: 15px; border-radius: 6px; border: 2px solid #555; }
@@ -366,12 +355,12 @@
             <p><b>3. 수치 카운터</b><br>
             - 점수 모으기, 횟수 채우기 등에 사용<br>
             - 카운터 이름 옆 숫자는 [시작수치]/[목표수치]를 나타냄(수정가능)<br>
+            - 각 수치 카운터를 추가할 때 <b>[%]</b>(퍼센트)와 <b>[■]</b>(진행바) 버튼을 눌러 개별적으로 켜고 끌 수 있습니다.<br>
             - 버튼 추가 방법: 추가하고 싶은 수치 입력. 여러 버튼 추가시 쉼표(,)로 구분<br>
-            - 카운트다운(차감)은 버튼에 '-1' 입력<br><br>
-            예) 목표 3000점, 버튼에 '10, 100' 입력 시 [+10] [+100] 버튼 생성</p>
+            - 카운트다운(차감)은 버튼에 '-1' 입력</p>
             
-            <p><b>4. 추가 설정 (자동 접기, 진행바 등)</b><br>
-            - 설정창 하단에서 '자동 접기', '애니메이션', '진행바 표시' 설정 가능<br>
+            <p><b>4. 추가 설정 (자동 접기, 애니메이션)</b><br>
+            - 설정창 하단에서 '자동 접기', '애니메이션' 설정 가능<br>
             - 마우스가 목록을 벗어나면 설정한 시간 뒤 자동으로 접힘</p>
         </div>
         <button class="help-close-btn" onclick="toggleHelp()">닫기</button>
@@ -411,8 +400,7 @@
             opacity: 1.0,
             autoFold: false,
             autoFoldSec: 10,
-            useAnimation: true,
-            showProgress: true 
+            useAnimation: true
         };
 
         let todoData = {};
@@ -421,6 +409,7 @@
         let pendingAction = null; 
         let isFolded = false; 
         let autoFoldTimer = null;
+        let isHovering = false; // ★ [버그 수정] 마우스 오버 상태 추적
 
         let mouseStartX = 0; let mouseStartY = 0;
         const foldIconEl = document.getElementById('foldedIcon');
@@ -434,32 +423,45 @@
 
         const viewModeEl = document.getElementById('viewMode');
         
-        viewModeEl.addEventListener('mouseenter', () => {
+        // ★ [버그 수정] 마우스 오버 상태 완벽 제어
+        document.body.addEventListener('mouseenter', () => { 
+            isHovering = true; 
+            if(autoFoldTimer) clearTimeout(autoFoldTimer); 
             if(!isDraggingSlider && todoData.opacity < 1.0) {
                 let boosted = todoData.opacity + 0.2;
                 if(boosted > 1.0) boosted = 1.0;
                 viewModeEl.style.opacity = boosted;
             }
-            if(autoFoldTimer) clearTimeout(autoFoldTimer);
         });
-        
-        viewModeEl.addEventListener('mouseleave', () => {
+        document.body.addEventListener('mouseleave', () => { 
+            isHovering = false; 
             if(!isDraggingSlider) viewModeEl.style.opacity = todoData.opacity;
-            startAutoFoldTimer();
+            startAutoFoldTimer(); 
+        });
+        document.body.addEventListener('mousemove', () => {
+            if(!isHovering) {
+                isHovering = true;
+                if(autoFoldTimer) clearTimeout(autoFoldTimer);
+            }
         });
 
         function startAutoFoldTimer() {
             if(autoFoldTimer) clearTimeout(autoFoldTimer);
-            if(todoData.autoFold && !isFolded 
+            if(todoData.autoFold && !isFolded && !isHovering
                && document.getElementById('editMode').style.display !== 'flex'
                && document.getElementById('helpModal').style.display !== 'flex') {
                 
                 const sec = parseInt(todoData.autoFoldSec) || 10;
                 autoFoldTimer = setTimeout(() => {
-                    if(!isFolded) toggleFold();
+                    if(!isFolded && !isHovering) toggleFold();
                 }, sec * 1000);
             }
         }
+
+        const sliderContainer = document.getElementById('sliderContainer');
+        const sliderTrack = document.getElementById('sliderTrack');
+        const sliderThumb = document.getElementById('sliderThumb');
+        let isDraggingSlider = false;
 
         sliderContainer.addEventListener('mousedown', startSliderDrag);
         function startSliderDrag(e) {
@@ -484,6 +486,10 @@
             document.getElementById('viewMode').style.opacity = percent;
         }
 
+        function saveTodoData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(todoData));
+        }
+
         function loadAll() {
             try { todoData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || DEFAULT_DATA; } catch(e) { todoData = DEFAULT_DATA; }
             if(!todoData.daily) todoData.daily = [];
@@ -493,7 +499,6 @@
             if(todoData.autoFold === undefined) todoData.autoFold = false;
             if(todoData.autoFoldSec === undefined) todoData.autoFoldSec = 10;
             if(todoData.useAnimation === undefined) todoData.useAnimation = true; 
-            if(todoData.showProgress === undefined) todoData.showProgress = true;
             
             checkState = JSON.parse(localStorage.getItem(STATE_KEY)) || {};
             resetState = JSON.parse(localStorage.getItem(RESET_KEY)) || { daily: 0, weekly: 0 };
@@ -582,7 +587,6 @@
             render();
         }
 
-        // ★ [버그 수정] 한 자리 숫자 포함하여 유연하게 날짜 체크
         function isValidDate(d) { return /^\d{4}-\d{1,2}-\d{1,2}$/.test(d); }
         
         function parseDateStr(dateStr) {
@@ -606,7 +610,6 @@
                 let isExpired = false; let show = false;
                 if(grp.noDate) show = true; 
                 else if(isValidDate(grp.start) && isValidDate(grp.end)) {
-                    // 안전한 파싱 후 문자열 비교
                     const startP = parseDateStr(grp.start);
                     const endP = parseDateStr(grp.end);
                     if (todayStr >= startP && todayStr <= endP) show = true;
@@ -648,7 +651,9 @@
             if (hasD) { body.appendChild(createSubHeader("일일")); const ul=document.createElement('ul'); grp.tasks_daily.forEach(t=>ul.appendChild(createTaskItem(t, `gd_${idx}_${t}`))); body.appendChild(ul); }
             if (hasW) { body.appendChild(createSubHeader("주간")); const ul=document.createElement('ul'); grp.tasks_weekly.forEach(t=>ul.appendChild(createTaskItem(t, `gw_${idx}_${t}`))); body.appendChild(ul); }
             if (hasO) { body.appendChild(createSubHeader("목표")); const ul=document.createElement('ul'); grp.tasks_once.forEach(t=>ul.appendChild(createTaskItem(t, `go_${idx}_${t}`))); body.appendChild(ul); }
-            if(hasC) { grp.counters.forEach((cnt, cIdx) => body.appendChild(createCounterItem(cnt, `cnt_${idx}_${cIdx}`))); }
+            
+            // ★ [버그 수정] 카운터 객체 자체를 넘겨서 동기화 보장
+            if(hasC) { grp.counters.forEach((cnt) => body.appendChild(createCounterItem(cnt))); }
             
             const footer = document.createElement('div'); footer.className = 'event-footer';
             let hasFooterContent = false;
@@ -679,16 +684,14 @@
             div.appendChild(h4); return div;
         }
 
-        // ★ [기능 추가] 카운터 진행바 UI 반영
-        function createCounterItem(cntData, uniqueId) {
-            let currentVal = checkState[uniqueId];
-            if(currentVal === undefined) currentVal = parseInt(cntData.current) || 0;
+        // ★ [기능 추가 & 버그 수정] 카운터 원본 데이터 동기화 및 개별 토글
+        function createCounterItem(cntData) {
+            let currentVal = parseInt(cntData.current) || 0;
             let targetVal = parseInt(cntData.target) || 0;
             
             const div = document.createElement('div'); div.className = 'counter-row';
             if(currentVal >= targetVal && targetVal > 0) div.classList.add('done');
 
-            // 퍼센트 계산
             let percent = 0;
             if (targetVal > 0) percent = Math.floor((currentVal / targetVal) * 100);
             if (percent > 100) percent = 100;
@@ -701,12 +704,11 @@
             
             let topHtml = `<div style="display:flex; justify-content:space-between; width:100%;">
                 <span>${cntData.label}</span> 
-                <span class="counter-val">${currentVal} / ${targetVal} ${todoData.showProgress && targetVal > 0 ? `<span style="font-size:10px; color:#aaa; font-weight:normal; margin-left:4px;">(${percent}%)</span>` : ''}</span>
+                <span class="counter-val">${currentVal} / ${targetVal} ${cntData.showPct !== false && targetVal > 0 ? `<span style="font-size:10px; color:#aaa; font-weight:normal; margin-left:4px;">(${percent}%)</span>` : ''}</span>
             </div>`;
             header.innerHTML = topHtml;
             
-            // 설정 켜져있으면 프로그래스 바 삽입
-            if (todoData.showProgress && targetVal > 0) {
+            if (cntData.showBar !== false && targetVal > 0) {
                 let barCont = document.createElement('div');
                 barCont.style.width = '100%'; barCont.style.height = '4px'; barCont.style.background = 'rgba(0,0,0,0.5)'; barCont.style.borderRadius = '2px'; barCont.style.overflow = 'hidden';
                 let bar = document.createElement('div');
@@ -722,8 +724,9 @@
                 const btn = document.createElement('button'); btn.className = 'btn-count' + (step<0?' minus':'');
                 btn.innerText = (step > 0 ? '+' : '') + step;
                 btn.onclick = () => {
-                    currentVal += step; checkState[uniqueId] = currentVal;
-                    localStorage.setItem(STATE_KEY, JSON.stringify(checkState)); render();
+                    cntData.current = currentVal + step;
+                    saveTodoData(); // ★ 메인 데이터 직접 덮어쓰기
+                    render();
                 };
                 btnRow.appendChild(btn);
             });
@@ -791,21 +794,17 @@
             sep.style.margin = '25px 0 10px 0';
             container.appendChild(sep);
 
-            // ★ [UI 개선] 추가 설정 그룹
+            // 추가 설정 그룹
             const extraHeader = document.createElement('div'); extraHeader.className = 'edit-label';
-            extraHeader.innerText = '추가 설정 (애니메이션, 진행바, 자동 접기)'; container.appendChild(extraHeader);
+            extraHeader.innerText = '추가 설정 (애니메이션, 자동 접기)'; container.appendChild(extraHeader);
             
             const extraRow = document.createElement('div'); extraRow.className='edit-row';
-            extraRow.style.background = '#222'; extraRow.style.padding='10px'; extraRow.style.borderRadius='4px'; extraRow.style.marginBottom='5px';
+            extraRow.style.background = '#222'; extraRow.style.padding='10px'; extraRow.style.borderRadius='4px';
             extraRow.style.flexDirection = 'column'; extraRow.style.alignItems = 'flex-start';
             extraRow.innerHTML = `
                 <div style="display:flex; align-items:center; width:100%; margin-bottom:8px;">
                     <input type="checkbox" id="chkUseAnim" ${todoData.useAnimation ? 'checked' : ''} style="margin-right:8px; cursor:pointer;">
                     <label for="chkUseAnim" style="color:#eee; font-size:13px; cursor:pointer;">애니메이션 효과 사용</label>
-                </div>
-                <div style="display:flex; align-items:center; width:100%; margin-bottom:8px;">
-                    <input type="checkbox" id="chkShowProgress" ${todoData.showProgress ? 'checked' : ''} style="margin-right:8px; cursor:pointer;">
-                    <label for="chkShowProgress" style="color:#eee; font-size:13px; cursor:pointer;">카운터 진행바 & 퍼센트 표시</label>
                 </div>
                 <div style="display:flex; align-items:center; width:100%; gap:5px;">
                     <input type="checkbox" id="chkAutoFold" ${todoData.autoFold ? 'checked' : ''} style="margin-right:3px; cursor:pointer;">
@@ -816,7 +815,6 @@
             `;
             container.appendChild(extraRow);
 
-            // 백업 UI
             const backupDiv = document.createElement('div'); backupDiv.className = 'backup-section';
             backupDiv.innerHTML = `
                 <div class="edit-label" style="border:none;">📦 데이터 백업/복원</div>
@@ -970,7 +968,7 @@
             if(grp.counters) grp.counters.forEach(c => cntList.appendChild(createCounterEditRow(c)));
             body.appendChild(cntList);
             const addCntBtn = document.createElement('button'); addCntBtn.className = 'btn'; addCntBtn.style.width='100%'; addCntBtn.innerText = '+ 카운터 추가';
-            addCntBtn.onclick = () => cntList.appendChild(createCounterEditRow({label:"", target:100, current:0, steps:"10, -10"}));
+            addCntBtn.onclick = () => cntList.appendChild(createCounterEditRow({label:"", target:100, current:0, steps:"10", showPct:true, showBar:true}));
             body.appendChild(addCntBtn);
 
             const delMainBtn = document.createElement('button'); delMainBtn.className = 'btn-del';
@@ -1005,18 +1003,37 @@
             btnDel.onclick = () => row.remove();
             row.appendChild(btnUp); row.appendChild(btnDown); row.appendChild(btnDel); return row;
         }
+        
+        // ★ [기능 추가] 각 항목별 퍼센트 및 진행바 토글 버튼 UI
         function createCounterEditRow(cData) {
             const row = document.createElement('div'); row.className = 'edit-row counter-item-row';
             row.style.background = '#282828'; row.style.padding='5px'; row.style.flexWrap='wrap';
-            row.innerHTML = `<input type="text" class="input-text c-label" value="${cData.label}" placeholder="이름"><input type="text" class="input-tiny c-curr" value="${cData.current}" placeholder="현재"><span class="slash-sep">/</span><input type="text" class="input-tiny c-target" value="${cData.target}" placeholder="목표"><input type="text" class="input-text c-steps" value="${cData.steps}" placeholder="버튼" style="flex:2;">`;
+            
+            const isPct = cData.showPct !== false;
+            const isBar = cData.showBar !== false;
+            
+            row.innerHTML = `<input type="text" class="input-text c-label" value="${cData.label}" placeholder="이름">
+            <input type="text" class="input-tiny c-curr" value="${cData.current || 0}" placeholder="현재"><span class="slash-sep">/</span>
+            <input type="text" class="input-tiny c-target" value="${cData.target}" placeholder="목표">
+            <input type="text" class="input-text c-steps" value="${cData.steps}" placeholder="버튼" style="flex:2; min-width:40px;">
+            <button class="btn-toggle t-pct ${isPct ? 'on' : ''}" title="퍼센트 표시">％</button>
+            <button class="btn-toggle t-bar ${isBar ? 'on' : ''}" title="진행바 표시">■</button>`;
+            
+            const btnPct = row.querySelector('.t-pct');
+            btnPct.onclick = () => btnPct.classList.toggle('on');
+            const btnBar = row.querySelector('.t-bar');
+            btnBar.onclick = () => btnBar.classList.toggle('on');
+            
             const btnUp = document.createElement('button'); btnUp.className = 'btn-move'; btnUp.innerText = '▲';
             btnUp.onclick = () => { if(row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling); };
             const btnDown = document.createElement('button'); btnDown.className = 'btn-move'; btnDown.innerText = '▼';
             btnDown.onclick = () => { if(row.nextElementSibling) row.parentNode.insertBefore(row.nextElementSibling, row); };
             const btnDel = document.createElement('button'); btnDel.className = 'btn-del'; btnDel.innerText = 'X';
             btnDel.onclick = () => row.remove();
+            
             row.appendChild(btnUp); row.appendChild(btnDown); row.appendChild(btnDel); return row;
         }
+
         function saveGUI() {
             const extractList = (parentDom) => Array.from(parentDom.querySelectorAll('.input-row-item')).map(row => {
                 const textInput = row.querySelector('.input-text');
@@ -1037,7 +1054,9 @@
                     label: crow.querySelector('.c-label').value.trim(),
                     target: crow.querySelector('.c-target').value,
                     current: crow.querySelector('.c-curr').value,
-                    steps: crow.querySelector('.c-steps').value.trim()
+                    steps: crow.querySelector('.c-steps').value.trim(),
+                    showPct: crow.querySelector('.t-pct').classList.contains('on'),
+                    showBar: crow.querySelector('.t-bar').classList.contains('on')
                 })).filter(c => c.label);
                 return {
                     title,
@@ -1054,15 +1073,14 @@
             todoData.iconUrl = document.getElementById('inputIconUrl').value.trim();
             todoData.autoFold = document.getElementById('chkAutoFold').checked;
             todoData.autoFoldSec = document.getElementById('inputAutoFoldSec').value;
-            
             todoData.useAnimation = document.getElementById('chkUseAnim').checked;
-            todoData.showProgress = document.getElementById('chkShowProgress').checked;
             
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(todoData));
+            saveTodoData();
             closeEditMode(); render();
         }
+
         function deleteExpiredGroup(idx) {
-            showConfirm("이 그룹을 삭제하시겠습니까?", () => { todoData.groups.splice(idx, 1); localStorage.setItem(STORAGE_KEY, JSON.stringify(todoData)); render(); });
+            showConfirm("이 그룹을 삭제하시겠습니까?", () => { todoData.groups.splice(idx, 1); saveTodoData(); render(); });
         }
         function toggleHelp() { 
             const modal = document.getElementById('helpModal'); 
