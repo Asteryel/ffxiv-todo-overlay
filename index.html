@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>FF14 Smart Todo v1.6</title>
+    <title>FF14 Smart Todo v1.7</title>
     <style>
         /* ================= [스타일 정의] ================= */
         html, body {
@@ -45,15 +45,12 @@
             padding: 8px;
             box-sizing: border-box;
             border-radius: 8px;
-            
-            /* 투명도: 0.075초, 크기: 0.1초 */
             transition: opacity 0.075s ease, transform 0.1s ease;
             transform-origin: top left;
             opacity: 1;
             transform: scale(1);
         }
         
-        /* 20% 크기(0.2)까지만 줄어들며 사라짐 */
         #viewMode.fading-out { opacity: 0; transform: scale(0.2); pointer-events: none; }
         .hidden { display: none !important; }
 
@@ -98,7 +95,6 @@
             background-color: rgba(0,0,0,0.7); border: none; color: #ffd700; font-size: 20px; 
             background-size: cover; background-position: center; background-repeat: no-repeat;
             cursor: pointer; align-items: center; justify-content: center;
-            
             transition: opacity 0.075s ease, transform 0.1s ease;
             transform-origin: center center;
             opacity: 0;
@@ -183,7 +179,7 @@
         .counter-row.done .counter-header { text-decoration: line-through; color: #888; }
         .counter-row.done .counter-val { color: #4caf50; text-decoration: line-through; }
 
-        .counter-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+        .counter-header { display: flex; flex-direction: column; font-size: 12px; margin-bottom: 5px; gap: 4px; }
         .counter-val { color: #8cf; font-weight: bold; }
         .counter-btns { display: flex; gap: 4px; justify-content: flex-end; }
         .btn-count {
@@ -235,15 +231,8 @@
             border-radius: 8px;
         }
         
-        .edit-mode-header {
-            margin-bottom: 10px;
-            flex-shrink: 0;
-        }
-        
-        #editScrollArea { 
-            flex: 1; overflow-y: overlay; 
-            padding-right: 5px; 
-        }
+        .edit-mode-header { margin-bottom: 10px; flex-shrink: 0; }
+        #editScrollArea { flex: 1; overflow-y: overlay; padding-right: 5px; }
 
         .edit-group { margin-bottom: 25px; border: 1px solid #444; padding: 10px; border-radius: 6px; background: #2a2a2a; }
         .edit-label { 
@@ -257,7 +246,6 @@
         .input-text { flex: 1; background: #333; border: 1px solid #555; color: white; padding: 5px; border-radius: 3px; caret-color: white !important;}
         
         .btn-del { background: #833; border: 1px solid #a55; color: white; width: 30px; border-radius: 3px; cursor: pointer; display:inline-flex; align-items:center; justify-content:center;}
-        
         .btn-move { background: #446; border: 1px solid #557; color: #cdf; width: 25px; border-radius: 3px; cursor: pointer; font-size: 10px; padding: 5px 0; display:inline-flex; align-items:center; justify-content:center;}
         .btn-move:hover { background: #558; color: white; }
 
@@ -272,13 +260,9 @@
         
         .safe-zone { height: 10px; width: 100%; }
 
-        /* 백업 섹션 */
         .backup-section {
-            margin-top: 30px; 
-            padding: 15px;
-            background-color: #20232a; 
-            border: 2px solid #555; 
-            border-radius: 8px;
+            margin-top: 30px; padding: 15px;
+            background-color: #20232a; border: 2px solid #555; border-radius: 8px;
         }
         .backup-label { color: #a0aec0; font-size: 14px; font-weight: bold; margin-bottom: 8px; display: block; }
         .backup-textarea {
@@ -288,7 +272,6 @@
         .btn-backup { background: #2b6cb0; color: white; border: 1px solid #4299e1; padding: 5px 10px; font-size: 12px; cursor: pointer; border-radius: 3px; }
         .btn-restore { background: #c53030; color: white; border: 1px solid #fc8181; padding: 5px 10px; font-size: 12px; cursor: pointer; border-radius: 3px; }
 
-        /* 요소 숨김용 */
         .input-row-item:first-child .btn-move:nth-of-type(1),
         .counter-item-row:first-child .btn-move:nth-of-type(1),
         .group-wrapper > .event-box:first-child .btn-move:nth-of-type(1) { display: none; }
@@ -338,7 +321,7 @@
         </div>
         <div id="listArea"></div>
         <div class="control-bar">
-            <span class="status-msg">ACT Todo v1.6</span>
+            <span class="status-msg">ACT Todo v1.7</span>
             <button class="btn btn-help" onclick="toggleHelp()">?</button>
             <button class="btn" onclick="openEditMode()">⚙️ 목록 수정</button>
         </div>
@@ -374,7 +357,7 @@
             <p><b>2. 커스텀 그룹/이벤트</b><br>
             - ⚙️ 수정 버튼 > <b>[+ 새 그룹 추가]</b>로 생성<br>
             - 기간이 있다면 날짜를, 없다면 <b>'기간 없음(상시)'</b> 체크<br>
-            - 날짜는 'YYYY-MM-DD'로 직접 입력<br>
+            - 날짜는 'YYYY-MM-DD'로 직접 입력 (예: 2023-1-9 도 가능)<br>
             - <b>기간이 만료되면</b> 목록이 사라지지 않고 <b>어둡게 표시</b>됨<br>
             - 이벤트 내부에서 매일/매주/기간 내 할 일을 나눠서 관리 가능<br>
             - 만료된 항목은 제목 옆 <b>[X]</b>버튼으로 즉시 삭제 가능<br>
@@ -387,8 +370,8 @@
             - 카운트다운(차감)은 버튼에 '-1' 입력<br><br>
             예) 목표 3000점, 버튼에 '10, 100' 입력 시 [+10] [+100] 버튼 생성</p>
             
-            <p><b>4. 자동 접기 & 애니메이션</b><br>
-            - 설정창 하단에서 '자동 접기' 및 '애니메이션 효과' 설정 가능<br>
+            <p><b>4. 추가 설정 (자동 접기, 진행바 등)</b><br>
+            - 설정창 하단에서 '자동 접기', '애니메이션', '진행바 표시' 설정 가능<br>
             - 마우스가 목록을 벗어나면 설정한 시간 뒤 자동으로 접힘</p>
         </div>
         <button class="help-close-btn" onclick="toggleHelp()">닫기</button>
@@ -414,7 +397,7 @@
     </div>
 
     <script>
-        const ICON_IMG_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAVrUlEQVRo3r1aCbRdZXX+znjn6c1TBshASMJLQiIJTRMgySIiWFwBi1hcoFXBpVREsdaCbY3DclhYbDVaWiUuxAKCRDBZDIUiJEBGMpg57728vHm+787TOf32f+6jL5S21trerP+dO5xz/r33/+1vf/s/0fB7eum6Dtd1dYsv0zRDPEQqlYptGAb4uVgqlVKTk5MZnlricH5f82q/64WzZs3C2bNnEQwGAzR0Jo28xLbtZfw8JxAINPr9/jid8PF78FjQNG2CY5DnnimXy/vpzJG+vr7uNWvW5LZv3/7/5wANlGhrNKKREb/K5/NdF41GV0UikVYa7aOR4G9gxOE4jqyKWh06B54LOgeeV+DK9NKZ19Pp9DNDQ0MvnT59epDfufzu/8YBmTiXy8mxnpO8j47cWltbe2k4HA4UCgUwoshms8po+sdhqKFmcIkZp6KGOCSrEolEwesRi8VydHB/JpPZ2t/f/1RnZ+ewBOH36kAoFAJvahWLxSsIh7sbGhrWMeK+iYkJyJAJbV+ABpsoO1wBR0fFteAaUcCugeYWYHCYegWmUYbhZFAppVHI55STdXV14kyBU73IQNx/5syZl7mqJa7M/84BMUwgw6jFCYuPM1p3NTU1NadSKYyMDBMWPpiWH8WyjkLFj7Jr02gfnHLeu7XuA/zNdIA5W2H+uoSHrIxWgc8dR8jKK6dy2bRaOQZGgtWfy+UfGBkZ+Qeu7nhXV+d/6YDxn/5A9qDBYnwLjf8KDb+LUUr09PQoKAXDCeTLFlJ5E8WKD64Zg+ZvrF7sg24GGACDbhBSruRCgZ8r0CoTxFMRpbKDTK6EQrGCYCCIgN/G2Nio3DsSCPjXcKUbUqnJfY2NjSlZ5f+RA1MJR6y3cnyrtbX1Q/zOFtbx+wNw9QhShSihYjOaNNKOQ9MJGafAUaShOm+SgB5g9HU/NH4POiBw0WQV3KIQr/onkc8WHJQrOqLRICrlIpLJpMlcW0oEtPD9G4lEIsUc+e0dkITljesZ/W/Q+A/yaJDymHgxZPMG8kVG2N8Aw47ALacBM8g7cTh5Gk/WscLQrDhttAWHXAXXc6KSpfEltQLigEvnfbaBSDiEbK5CRzTO7YfPguSWTvgu4on1zIudfJ8VsvhvHagmrHD7XzQ3N99OhjDIDghH4kgzCOUKDRJ2cbJV4yNcgVqOKD9PEjp0xIp68CHrML35XYKRL6nErRRTdKKMeCwCP1f51ls2MYlrcexEF9PDx+DozCsLQb8uK6HRnkWySny/k/RbFoqe/jLfDh3BPRNoE/F+By8wz57tovE1SOdsOJxY010VVYaTCSs1gZAq55ifTFzCRbEOca9JtDmxFW5EqG4xJnoyuGLtbFhaCvW1MXz0wx9UK93UWI9b/vRutVoaHZD1SjHSvC3CYQfMAzMcjtzB6B8mTf9UKHi6E+c5ILgfGxu7iDf+XH19fayjowOhMGFTDAqV01hH4d0tZ/iZzhh+wkAYpoiamjjKRhwp2q05SS5VDk4pz0Q/hkJuHIvnJ7DlO19AW3OtKmw+n60M+do3/x579x2GYdJ406L5kiM6UkUNtaEILBbEfD4fI23fQyf20oET0x0wpuOe0LG5XPe0tbVtoiOq6Dg6k5UUKVwuUZcEFXoV/ApVumSYUDiMb3z504jEW3D02ElCfBINtWHc/uH3YeG8RixdWIcv3PUnmDmjmUVMRyaTxfhEEs//y8vY/PUHmFeSN1w9CZAGj604V7HioCYWRGoyKdW7iRPmmcwvkyErYtt5K0DaEk+XxOPxm4RCuXQ0LMHoM2E1VUw5Kh6fy1JrloSahQm47po1+MCNG7FhXRrZyT787LEncc2Gq7D5S3eqQiPy4B8feQF3f/lh1AZzGB7qZdXOQwpVOkvj7RAqTOw4A1HmublcQSV5mRBMy0rU1mF0dETy8yY68Bjt2zMlOcwp6DDyJn94P6viDLmx3x8kRwtsoKIsXmiOpiDjChXyUpsM8tnPfAwf/tAmxePUNTjym6NoqgvhAzdshCEX85VMpvGjrT/DvsPdCPjotJZTDii5YYYRJHFcu+FduGzFQjywZSt68knCkzlRcZEpVBCvjcBMToiNM1jc3s+EPkAYliW5FYQYdVAmzOKPf0WsNQwPDytpUCqTSWiEpsBCJ0iRwkBqEEoVsoxomk3XX00HfKTDANoXzsH1163DmtXvUlhXUeIyDY+MkSqL2Lj+Ssy/sAHHTp5Gc1MTHbDQ1FSPz37qFvzrK7uwZ/8BBVGZgwBmXakoR2Nhn5IthHqcq7Cd9x5XumpKy/N1OQvGXDlJVqRc1liNTZWsvJuCkDYN95peUquw78ARdHT2YPmyhaRFG2tXLyfdZnDiVKfCebDKNJ//9K248/YPKKi+svMNhAI27vjoLRgaGcdkOof+wSE8vm074caVYfQdp+SpQGGlTAH1zaz02qA4N5dOrGROdIyPj8MUY0lPJin0D/mDb2BgAH6W9iJlguJ7lSyO0jDCDmQnGmGi+1wf2pe041N33IpEIqoiPTg0iiee2oFtT+/Aqc5zjHgOlh1GXW0Uy5ZcjBuvvwZXrV2Fq9evUUeZW16PbnsOP3jon0nTJVUIFUQJD81x1fTlcgV5+kOBJ7b6aOcVJJmf05kSOTYsX9ay0i0TTHnJYXJVbE+QCU0yoTRXIOOgtaUJX9v8lzh2/BSWX7oUS5csVEbs2n0Ym7/5IN7YvRulwiSdFzHHBaYqnegawonTZ/Gr517B9e9Zh3vv+QRmtrWo6/L5Ah554hkcPHIUtiEwlWs81nDVH12teCqdR208MQWjS3hpjMgZMcQrNh9zampqPknjIyLUdI3FyTXfWkJxYEq4yqq0tbZh0/vegzlzZqnvXn3tIO78wv04dPiw1wuQEnXDUPJaHNEZVX5kJIs4fPw0Tp7pwtpVy5k/YdUbSLRfeW03CoWcmkeCBdfDvzjj8neHq9FQF8UoVTBXTmfQn5YOT6/2rPX0KioNidzQdav6hf90ZbzngE7BNjg4jp/89CkMDY8q4/sGRrD521vR1TOk8K1ZAViJS1hJG+lIgAXKUkMn7HTmiGmbeOnXu/B3D/4EU1TY1lKPkI+RrpRYJEuqMMp770hKpfHFYlmVLc8+V9rVFrFdp1yVItHAHPCRibwuyvWUoi5soMlRJyV6EbV9IXzi47dg8aL5avJfbH8Nbx49S+NtGFYIpp+6qDxBnU8SsOmAL8jBWsLfJQDUH4ywhie2PYvfcDXkFQ4FaRgBw8RdsWwRYhGKyVIBTqVMhwrKCYcOSY2wbUvo1EcHElJ89dWrV4v2j9EzUyKiKKzKTF5bSMPICsIMhjQrhNbDj7+AzrP9yOWLeHHXSVbBuBfpYA3PZyIiTfjTATpr2EGuSrXwSR2h8QwoBgaH8cquN5QDUqTGx0dgWwbaF12kJLWCDyuxymImteuUVTKbnEfUsQhO0W76ypUrxQFTGnVJYs2r5W9hWDf9amikVNEq0qh0do+jp2+MNJlCz2CSUY/R2BivodOGR78G80CGpiS1XyUzXA+UBunYoWFHjp/kPSbwg3/6MVKk3DJF3OM/fwpJaWCEqtXui1OFs+vRt8gYRoEvQ0FINA89KfGDM9VMe8knxhNzChpBLzFNgUJQtZC9/SPIF8oosakxCRPNFKYiAdB4GSpt1B8hA9FZPvVe1RLV9GuM/ASpd5g1o0M5Z3G+poZ6lbQSdcvyMI8qlOVV1UDyp6I2EF566SU5aUIEknikpjU0FU2BjCSiGK2bIa/AaDbldZiJV6faTpv4FptIyd6q+SinrUjVCE5KXawZYdXwKHkgld2wVCQrxHVLczOWtbeTCSuYc8FcfOwjt7GqBxRplCteEFSh1ZTfqMJcZERGctaUTktqEE/Ky66aSFWTnhuEjYg2UWu6yYndALsnCxuuehfWX7ESly2/CJksK2SNheFcHSdgouWpYHU2NCadKHXxOzrub1GJCNXoD/M+RdWRuewtWpsbEGUw/vwzd2LpJYuwtP0S9PX1kzCkFpje6okOY8A9KtZE8kjgCqT+MeWAUCffyF7MBItZREHKJ/LWp5Sca1RgUNgZZj0j7GL9VZfjhmtXeQo2amB5+xwcG+j3cC4wkahL8qH6mTVFkzzys4Mr8TxKE5cVN0CttXrVZeo+ixYuYG1pwQPf/QG+t+VBKuGMYixt2uaJCENZAdkwY5zHeFSR16Wysecc5PtOqcqqWSAchDQMcrNFkWYFwvAl5sL11eKHjzyHV/ccUwwkMPij9e2ojxCSViudjcEppOFkhqVqcTZ2arkhhWfNl2AgEopqHeJ9+dJ2rFu7+q1q/MV7v4Zv3f99Klrpq02vVVG7GY5KfB8b5XLlrd2+Lh57VUPDHkBkcH7mzJntTOZV0v/6KY0t9sD+cISR47Ab6GpU7SiMTwzjxVf3o38ohVWXzseM5gQDbmPvKRPF7LgnAxSb6SraqOQ87Ptl50I+jqCZFfWr996FRRfPU5Lkoa2PYuvDT7ASl1XNUWyliRoteYlLFxJxBreYJXHI9oz2FBXD067wqSTFfffd5544cYL9Qui9o6Ojlnht+kOwQjG1LeIg6EFDdhTY6+bS4zjTNYo/oH5vba7BorkNCtdHjnSikGe0JWeCdTTc8Do5Ui/8dep4YaOOL3/+I7h63Wr2CSnc/mf34eGfPY1SsaCo0tu49gS8NFBeMQUaG2JsgAYFPrQ9dz8l0FGRPUpOb9u2TTaUdrOhPy77nZLYvtwEKqV6FiKyhlRDZ1RJXKecVuW+uTWAaNj22lFC7ZM3LcCCNgM/fuw1HOosIEved4qCQ5MsF0BdfRjrVszEbdfdgIVzZ3jQYcc0TDmt9I/HjNW9essz3vXke8Cvq50M2VZhkI+yH9g7tU+kHDh27JgkR19ra+svKeqUA+V8BoXkOILxGhovDXqaFMaj6BMGqbGuBq8fGGBBS+GieU1oaYzh3VcuwOXLZ+PQqXEcPj2K4bEJ+G0HF7bG0b6gjceY4nrB8fGTneyJX2HRSjLKTpVtxF7D64uF73VbFbzamhCGh4dExLkknKd5Vu9/2BvduHEjhdrgYq7Ck93d3fOEjaJx6qTIPLJPUHG2aBWRAuK3a5GVwnNhaVm0tLXh5k2X45brF7CpOX+rKZ0too8CsJUOhoJ+9d2T257H33z1++jp6fWUguPpHc8iU1Hs1MtvV9BQG0BHxxmQZE4R4ptI+UeEjc7blaDxoOGjLS0tcSbzFex2NEOvKBlrmHFGyVRRUZVUM1UvKwVKFn0i58PBDotRrlWF//ndI5xYg8/S8JUtL+Hrf/sYjrFXXrFsvmrY7/niN3CCySvV2Kur3l6Txhqi2lX1GWo7srUpgv7+XsG+Q4b8LqH+C0eMevu+kDTkK1asqDDyW+np1ey8Vg+Q3+PWOIr5UfgiF7DJtj2NIq2mVFSt4skGyoiCG8J3HhtHupREd88g2mqKaEtksXvPXmSHzuGZ7jcxNNCH2TOb2YKyWBmuwrXmervgDslCl5Wl0YrIuCKNtX7aNamwzxr1GqP/E1EM0x+CnLfeQqGbN29Ovvrqq/K0ZD1ZKpxOpRjNsmpwDCvs0ZwUFX89a0VCFRiloSgfhlIBTIyT9wujGKPC7Oo6h3Kqh/VgXEGkq7ufTc9Jqk1HqcupHkNWVFOeeHkgfXE8oilykN1wBnSQteqeRYsW7REb33FrcWqjSGB3wQUXvH733Xc/wIT+EpfLX2JBioWGGHVCya5Xesaxa5gfLSjkhgkbiqpyUm3SOqVzSGVT8OkOhV6JDETnWMllO9cyS2qHIpul3NZDygHBcjhgsTBmVe0weJ0vZCHEdOnp7UVTU1ORwfzhli1bdm3atMmqBl0Sxp2S/m934DaOJQcOHHh8//79X+GFV1155ZWqoX79jQOI1sxF04x27Dk8ivdesxKPPn2Y8AkwQU18/KbFdCiNx7cfx8a1s/HoL3bh3VfMQn3CwvbndmPF0jl494bL8NVvP4SaRJRGati5czc+95mP4IUXd2JkeAR/fMMGvPD8DjzzzDPYsGGDc/PNN+9bv379k83NzcIAv5b+h+NXslDigP4Ou+sRjpFly5al6PF+ZvyjbW1t+aVLl2JyYgiNNQVcPDcEv1VCTZQ0J7vNojtIrwHbxcDAEMKE3NKL6+E3SqTbGJYsvhCWIc/HZLfNYlsZwpwLZ2HuhW0IB2001CcQCTh0KI8FF82ZevqZY6e448Ybb+yk8WOy/8YhbaD97wUD7+iAaNmZ0u4mEonsbbfdtvnSSy99klLDtdUOngsLEwhV9sLWxmDpbMTLWUIni6a6gMJ2NjPGvKGOMuRpZZHNeI3qB/buO8VqfQJnTh5X0RemGhnuxkB/N3NnAP1959SDQkY2xcT9Hknlr8k+p8k+aQkqx1yO8550vJMDkl3dUijlwTVvkpk/f/6bZKVe0ms6Ho+78oyss+MoKvluzGvoQpPvIGL2KHKZSfST89m3K30foABLTWYVU1kUc0m+z6YnkE4OMqkzlOcOmhsCyOcymD17lmzrC53LI6UfkS5/efr06QiTNkKZU9vb2ysSej7nLkw9vzvPgQULFqgjT3JYmQ8xkRt5YdO99967dseOHfNYFybpwF7mwiDlhhuJRJQ2D1MmDXW9ALuwi+KzD6O9r6O1dhIxIjURyVKAjTLKA/Br5xCy+hAKFDGzCeT3qOqBRUzKQ/O2thksuu4Qoz1A44WOVtHYtWSfxVQGcw4ePOjj59DLL78s/XCkCiXtLRaisfKQOrJv374QE2jW8PBwjO8bSWMrDx06dIHUCd4gyOjk6GQ6mUxa8qi1sbFJ6+8foCRPoePMCZw9tQdB62KcPnkQAX2A6rOC3xzeQ6V6jmkyjKHBHlWYzpw5ox6oMAguo+50dHRM8p6jQ0NDQcKnnSY10znfm2++SabWZ/P3caKge+fOncVqnortGW2apIhRla4g1pecO3cuTK+jTKLmgYGBIFvOBI0OU0DxK3+IkfIxMjZlBym25GOB0flZY7Ipw0h96sF3RW2V5yCrJbCTB9sScdlSlB6c57kMSJG5Rj+KtLuQJ3WXOE9Kaivf5zgyFHBJOjE4Y8aMCd6r89lnn937yCOPDAjMp1ZAODR97bXXjvNGPbwgWldXl2FVznAy2Q2e4MRRvg/z9xCXOcAbifE2nZGHIiadMGmATagZNMggnvUpgxkAl7/JfyOoMDjlhoaGMpO1yDkqPLfElS+SdQqEZ56OZXlvmTcVCASSfD/B+4xR4owRakk6nWagJulABl738Y4vq8pGwrmycxurjvi097KMoerwV4ddvdas5pc+LUCV6ihVhySjNMrZKrMI0ySrY3zaSFZ/y1UJ5nf6vxJ6tQKaVSOnhr/Kz75p3005YLzt/m93oDjNienHqd8rv81/y/k3LG6KeIMM52MAAAAASUVORK5CYII="; 
+        const ICON_IMG_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAIAAACRXR/mAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+/PuT868wAAABESURBVHja7M4xEQAwDAOxuPw5uwi6ZeigB/+Z/y3k3LG6KeIMM52MAAAAASUVORK5CYII="; 
 
         const STORAGE_KEY = 'act_todo_permanent_v1'; 
         const STATE_KEY = 'act_todo_state_perm_v1';
@@ -428,7 +411,8 @@
             opacity: 1.0,
             autoFold: false,
             autoFoldSec: 10,
-            useAnimation: true 
+            useAnimation: true,
+            showProgress: true 
         };
 
         let todoData = {};
@@ -440,11 +424,7 @@
 
         let mouseStartX = 0; let mouseStartY = 0;
         const foldIconEl = document.getElementById('foldedIcon');
-        const sliderContainer = document.getElementById('sliderContainer');
-        const sliderTrack = document.getElementById('sliderTrack');
-        const sliderThumb = document.getElementById('sliderThumb');
-        let isDraggingSlider = false;
-
+        
         foldIconEl.addEventListener('mousedown', (e) => {
             mouseStartX = e.clientX; mouseStartY = e.clientY;
         });
@@ -453,6 +433,7 @@
         });
 
         const viewModeEl = document.getElementById('viewMode');
+        
         viewModeEl.addEventListener('mouseenter', () => {
             if(!isDraggingSlider && todoData.opacity < 1.0) {
                 let boosted = todoData.opacity + 0.2;
@@ -512,6 +493,7 @@
             if(todoData.autoFold === undefined) todoData.autoFold = false;
             if(todoData.autoFoldSec === undefined) todoData.autoFoldSec = 10;
             if(todoData.useAnimation === undefined) todoData.useAnimation = true; 
+            if(todoData.showProgress === undefined) todoData.showProgress = true;
             
             checkState = JSON.parse(localStorage.getItem(STATE_KEY)) || {};
             resetState = JSON.parse(localStorage.getItem(RESET_KEY)) || { daily: 0, weekly: 0 };
@@ -594,20 +576,26 @@
             }
         }
 
-        // ★ [데이터 저장 헬퍼]
-        function saveTodoData() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(todoData));
-        }
-
         function toggleSection(uniqueId) {
             checkState[uniqueId] = !checkState[uniqueId];
             localStorage.setItem(STATE_KEY, JSON.stringify(checkState));
             render();
         }
 
+        // ★ [버그 수정] 한 자리 숫자 포함하여 유연하게 날짜 체크
+        function isValidDate(d) { return /^\d{4}-\d{1,2}-\d{1,2}$/.test(d); }
+        
+        function parseDateStr(dateStr) {
+            if (!dateStr) return null;
+            const parts = dateStr.split('-');
+            if(parts.length !== 3) return dateStr;
+            return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+        }
+
         function render() {
             const listArea = document.getElementById('listArea');
             listArea.innerHTML = '';
+            
             const now = new Date();
             const todayStr = now.toISOString().split('T')[0];
 
@@ -618,8 +606,11 @@
                 let isExpired = false; let show = false;
                 if(grp.noDate) show = true; 
                 else if(isValidDate(grp.start) && isValidDate(grp.end)) {
-                    if (todayStr >= grp.start && todayStr <= grp.end) show = true;
-                    else if (todayStr > grp.end) { show = true; isExpired = true; }
+                    // 안전한 파싱 후 문자열 비교
+                    const startP = parseDateStr(grp.start);
+                    const endP = parseDateStr(grp.end);
+                    if (todayStr >= startP && todayStr <= endP) show = true;
+                    else if (todayStr > endP) { show = true; isExpired = true; }
                 }
                 if (show) renderCustomGroup(listArea, grp, idx, isExpired);
             });
@@ -657,8 +648,7 @@
             if (hasD) { body.appendChild(createSubHeader("일일")); const ul=document.createElement('ul'); grp.tasks_daily.forEach(t=>ul.appendChild(createTaskItem(t, `gd_${idx}_${t}`))); body.appendChild(ul); }
             if (hasW) { body.appendChild(createSubHeader("주간")); const ul=document.createElement('ul'); grp.tasks_weekly.forEach(t=>ul.appendChild(createTaskItem(t, `gw_${idx}_${t}`))); body.appendChild(ul); }
             if (hasO) { body.appendChild(createSubHeader("목표")); const ul=document.createElement('ul'); grp.tasks_once.forEach(t=>ul.appendChild(createTaskItem(t, `go_${idx}_${t}`))); body.appendChild(ul); }
-            // ★ [수정] 카운터 렌더링 시 그룹 객체(cnt) 자체를 넘김
-            if(hasC) { grp.counters.forEach((cnt) => body.appendChild(createCounterItem(cnt))); }
+            if(hasC) { grp.counters.forEach((cnt, cIdx) => body.appendChild(createCounterItem(cnt, `cnt_${idx}_${cIdx}`))); }
             
             const footer = document.createElement('div'); footer.className = 'event-footer';
             let hasFooterContent = false;
@@ -689,26 +679,51 @@
             div.appendChild(h4); return div;
         }
 
-        // ★ [수정] 카운터 로직: 데이터를 객체(cntData)에 직접 저장
-        function createCounterItem(cntData) {
-            // 더 이상 checkState를 읽지 않고, 객체의 current 값을 직접 사용
-            let currentVal = parseInt(cntData.current) || 0;
+        // ★ [기능 추가] 카운터 진행바 UI 반영
+        function createCounterItem(cntData, uniqueId) {
+            let currentVal = checkState[uniqueId];
+            if(currentVal === undefined) currentVal = parseInt(cntData.current) || 0;
             let targetVal = parseInt(cntData.target) || 0;
             
             const div = document.createElement('div'); div.className = 'counter-row';
-            if(currentVal >= targetVal) div.classList.add('done');
-            div.innerHTML = `<div class="counter-header"><span>${cntData.label}</span> <span class="counter-val">${currentVal} / ${cntData.target}</span></div>`;
+            if(currentVal >= targetVal && targetVal > 0) div.classList.add('done');
+
+            // 퍼센트 계산
+            let percent = 0;
+            if (targetVal > 0) percent = Math.floor((currentVal / targetVal) * 100);
+            if (percent > 100) percent = 100;
+            if (percent < 0) percent = 0;
             
+            const header = document.createElement('div');
+            header.className = 'counter-header';
+            header.style.flexDirection = 'column';
+            header.style.gap = '4px';
+            
+            let topHtml = `<div style="display:flex; justify-content:space-between; width:100%;">
+                <span>${cntData.label}</span> 
+                <span class="counter-val">${currentVal} / ${targetVal} ${todoData.showProgress && targetVal > 0 ? `<span style="font-size:10px; color:#aaa; font-weight:normal; margin-left:4px;">(${percent}%)</span>` : ''}</span>
+            </div>`;
+            header.innerHTML = topHtml;
+            
+            // 설정 켜져있으면 프로그래스 바 삽입
+            if (todoData.showProgress && targetVal > 0) {
+                let barCont = document.createElement('div');
+                barCont.style.width = '100%'; barCont.style.height = '4px'; barCont.style.background = 'rgba(0,0,0,0.5)'; barCont.style.borderRadius = '2px'; barCont.style.overflow = 'hidden';
+                let bar = document.createElement('div');
+                bar.style.width = `${percent}%`; bar.style.height = '100%'; bar.style.background = '#4caf50'; bar.style.transition = 'width 0.3s ease';
+                barCont.appendChild(bar);
+                header.appendChild(barCont);
+            }
+            div.appendChild(header);
+
             const btnRow = document.createElement('div'); btnRow.className = 'counter-btns';
             cntData.steps.split(',').map(s=>s.trim()).forEach(stepStr => {
                 const step = parseInt(stepStr); if(isNaN(step)) return;
                 const btn = document.createElement('button'); btn.className = 'btn-count' + (step<0?' minus':'');
                 btn.innerText = (step > 0 ? '+' : '') + step;
                 btn.onclick = () => {
-                    // ★ [수정] 객체 값 업데이트 후 메인 데이터 저장
-                    cntData.current = currentVal + step;
-                    saveTodoData(); // 메인 저장소(todoData) 업데이트
-                    render();
+                    currentVal += step; checkState[uniqueId] = currentVal;
+                    localStorage.setItem(STATE_KEY, JSON.stringify(checkState)); render();
                 };
                 btnRow.appendChild(btn);
             });
@@ -776,31 +791,32 @@
             sep.style.margin = '25px 0 10px 0';
             container.appendChild(sep);
 
-            const autoFoldHeader = document.createElement('div'); autoFoldHeader.className = 'edit-label';
-            autoFoldHeader.innerText = '자동 접기 & 애니메이션'; container.appendChild(autoFoldHeader);
+            // ★ [UI 개선] 추가 설정 그룹
+            const extraHeader = document.createElement('div'); extraHeader.className = 'edit-label';
+            extraHeader.innerText = '추가 설정 (애니메이션, 진행바, 자동 접기)'; container.appendChild(extraHeader);
             
-            const animRow = document.createElement('div'); animRow.className='edit-row';
-            animRow.style.background = '#222'; animRow.style.padding='10px'; animRow.style.borderRadius='4px'; animRow.style.marginBottom='5px';
-            animRow.innerHTML = `
-                <div style="display:flex; align-items:center; width:100%;">
-                    <input type="checkbox" id="chkUseAnim" ${todoData.useAnimation ? 'checked' : ''} style="margin-right:8px;">
-                    <label for="chkUseAnim" style="color:#eee; font-size:13px;">애니메이션 효과 사용</label>
+            const extraRow = document.createElement('div'); extraRow.className='edit-row';
+            extraRow.style.background = '#222'; extraRow.style.padding='10px'; extraRow.style.borderRadius='4px'; extraRow.style.marginBottom='5px';
+            extraRow.style.flexDirection = 'column'; extraRow.style.alignItems = 'flex-start';
+            extraRow.innerHTML = `
+                <div style="display:flex; align-items:center; width:100%; margin-bottom:8px;">
+                    <input type="checkbox" id="chkUseAnim" ${todoData.useAnimation ? 'checked' : ''} style="margin-right:8px; cursor:pointer;">
+                    <label for="chkUseAnim" style="color:#eee; font-size:13px; cursor:pointer;">애니메이션 효과 사용</label>
                 </div>
-            `;
-            container.appendChild(animRow);
-
-            const afRow = document.createElement('div'); afRow.className='edit-row';
-            afRow.style.background = '#222'; afRow.style.padding='10px'; afRow.style.borderRadius='4px';
-            afRow.innerHTML = `
-                <div style="display:flex; align-items:center; width:100%;">
-                    <input type="checkbox" id="chkAutoFold" ${todoData.autoFold ? 'checked' : ''} style="margin-right:8px;">
-                    <label for="chkAutoFold" style="color:#eee; font-size:13px; margin-right:auto;">자동 접기 사용</label>
+                <div style="display:flex; align-items:center; width:100%; margin-bottom:8px;">
+                    <input type="checkbox" id="chkShowProgress" ${todoData.showProgress ? 'checked' : ''} style="margin-right:8px; cursor:pointer;">
+                    <label for="chkShowProgress" style="color:#eee; font-size:13px; cursor:pointer;">카운터 진행바 & 퍼센트 표시</label>
+                </div>
+                <div style="display:flex; align-items:center; width:100%; gap:5px;">
+                    <input type="checkbox" id="chkAutoFold" ${todoData.autoFold ? 'checked' : ''} style="margin-right:3px; cursor:pointer;">
+                    <label for="chkAutoFold" style="color:#eee; font-size:13px; cursor:pointer; margin-right:5px;">자동 접기 사용</label>
                     <input type="number" id="inputAutoFoldSec" class="input-tiny" value="${todoData.autoFoldSec || 10}" style="width:50px;">
-                    <span style="color:#aaa; font-size:12px; margin-left:5px;">초 후 접기</span>
+                    <span style="color:#aaa; font-size:12px;">초 후 접기</span>
                 </div>
             `;
-            container.appendChild(afRow);
+            container.appendChild(extraRow);
 
+            // 백업 UI
             const backupDiv = document.createElement('div'); backupDiv.className = 'backup-section';
             backupDiv.innerHTML = `
                 <div class="edit-label" style="border:none;">📦 데이터 백업/복원</div>
@@ -823,7 +839,7 @@
 
         window.exportData = function() {
             const backupObj = {
-                v: "1.6",
+                v: "1.7",
                 todoData: JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"),
                 checkState: JSON.parse(localStorage.getItem(STATE_KEY) || "{}"),
                 resetState: JSON.parse(localStorage.getItem(RESET_KEY) || "{}")
@@ -1038,7 +1054,9 @@
             todoData.iconUrl = document.getElementById('inputIconUrl').value.trim();
             todoData.autoFold = document.getElementById('chkAutoFold').checked;
             todoData.autoFoldSec = document.getElementById('inputAutoFoldSec').value;
+            
             todoData.useAnimation = document.getElementById('chkUseAnim').checked;
+            todoData.showProgress = document.getElementById('chkShowProgress').checked;
             
             localStorage.setItem(STORAGE_KEY, JSON.stringify(todoData));
             closeEditMode(); render();
@@ -1092,10 +1110,14 @@
             }
         }
         function getNextWeeklyResetTime() { const d = new Date(); const day = d.getDay(); const t = new Date(d); t.setDate(d.getDate() - day + 2); t.setHours(17,0,0,0); if(d > t) t.setDate(t.getDate() + 7); return t; }
-        function isValidDate(d) { return /^\d{4}-\d{2}-\d{2}$/.test(d); }
+        
         function getDdayString(endDateStr) {
-            const now = new Date(); now.setHours(0,0,0,0); const end = new Date(endDateStr);
-            const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24)); return diff === 0 ? "D-Day" : (diff > 0 ? "D-" + diff : "END");
+            const now = new Date(); now.setHours(0,0,0,0); 
+            const parts = endDateStr.split('-');
+            if(parts.length !== 3) return "ERR";
+            const end = new Date(parts[0], parts[1]-1, parts[2]);
+            const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24)); 
+            return diff === 0 ? "D-Day" : (diff > 0 ? "D-" + diff : "END");
         }
 
         loadAll(); render(); setInterval(checkAutoReset, 60000);
